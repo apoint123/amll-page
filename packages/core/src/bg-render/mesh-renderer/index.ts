@@ -782,7 +782,7 @@ export class MeshGradientRenderer extends BaseRenderer {
 			return;
 		}
 
-		this.frameTime += frameDelta;
+		this.frameTime += frameDelta * this.flowSpeed;
 
 		if (!(this.onRedraw(this.frameTime, frameDelta) && this.staticMode)) {
 			this.requestTick();
