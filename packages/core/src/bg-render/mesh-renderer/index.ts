@@ -18,7 +18,7 @@ import {
 	contrastImage,
 	saturateImage,
 } from "../img.ts";
-import { generateControlPoints, randomRange } from "./cp-presets.ts";
+import { generateControlPoints } from "./cp-generate.ts";
 import meshFragShader from "./mesh.frag.glsl?raw";
 import meshVertShader from "./mesh.vert.glsl?raw";
 
@@ -719,7 +719,6 @@ export class MeshGradientRenderer extends BaseRenderer {
 	private gl: RenderingContext;
 	private lastFrameTime = 0;
 	private frameTime = 0;
-	private lastQuantifiedTriggedTickTime = 0;
 	private currentImageData?: ImageData;
 	private lastTickTime = 0;
 	private volume = 0;
@@ -785,60 +784,6 @@ export class MeshGradientRenderer extends BaseRenderer {
 		}
 
 		this.frameTime += frameDelta * this.flowSpeed;
-		const quantifiedTickTime = tickTime / 10000;
-
-		if (
-			quantifiedTickTime - this.lastQuantifiedTriggedTickTime >= 1.8 &&
-			this.currentImageData != null
-		) {
-			console.log(
-				"[mesh] update control points matrix, qtt=",
-				quantifiedTickTime,
-				`, lqtt=${this.lastQuantifiedTriggedTickTime}`,
-			);
-			this.lastQuantifiedTriggedTickTime = quantifiedTickTime;
-
-			const newMesh = new BHPMesh(
-				this.gl,
-				this.mainProgram.attrs.a_pos,
-				this.mainProgram.attrs.a_color,
-				this.mainProgram.attrs.a_uv,
-			);
-			newMesh.resetSubdivition(15);
-
-			const chosenPreset = generateControlPoints(
-				6,
-				6,
-				randomRange(0.4, 0.6),
-				randomRange(0.3, 0.6),
-				0.8,
-				Math.floor(randomRange(3, 5)),
-				randomRange(0.2, 0.3),
-				randomRange(-0.1, -0.05),
-			);
-
-			newMesh.resizeControlPoints(chosenPreset.width, chosenPreset.height);
-			const uPower = 2 / (chosenPreset.width - 1);
-			const vPower = 2 / (chosenPreset.height - 1);
-			for (const cp of chosenPreset.conf) {
-				const p = newMesh.getControlPoint(cp.cx, cp.cy);
-				p.location.x = cp.x;
-				p.location.y = cp.y;
-				p.uRot = (cp.ur * Math.PI) / 180;
-				p.vRot = (cp.vr * Math.PI) / 180;
-				p.uScale = uPower * cp.up;
-				p.vScale = vPower * cp.vp;
-			}
-			newMesh.updateMesh();
-
-			const albumTexture = new GLTexture(this.gl, this.currentImageData);
-			const newState: MeshState = {
-				mesh: newMesh,
-				texture: albumTexture,
-				alpha: 0,
-			};
-			this.meshStates.push(newState);
-		}
 
 		if (!(this.onRedraw(this.frameTime, frameDelta) && this.staticMode)) {
 			this.requestTick();
@@ -1068,16 +1013,7 @@ export class MeshGradientRenderer extends BaseRenderer {
 			);
 			newMesh.resetSubdivition(15);
 
-			const chosenPreset = generateControlPoints(
-				6,
-				6,
-				randomRange(0.4, 0.6),
-				randomRange(0.3, 0.6),
-				0.8,
-				Math.floor(randomRange(3, 5)),
-				randomRange(0.2, 0.3),
-				randomRange(-0.1, -0.05),
-			);
+			const chosenPreset = generateControlPoints(6, 6);
 
 			newMesh.resizeControlPoints(chosenPreset.width, chosenPreset.height);
 			const uPower = 2 / (chosenPreset.width - 1);
