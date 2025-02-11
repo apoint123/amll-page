@@ -3,7 +3,8 @@
 本模块定义了一个用于跨端同步播放媒体信息的数据传输协议，在双方结构情况支持的情况下，可以以任意形式传输并同步包括歌词在内的音频媒体播放状态。
 
 ## 协议概述
-本协议基于二进制WebSocket消息实现音乐播放状态同步，包含播放控制、元数据传输、歌词同步等功能。协议使用小端字节序进行二进制序列化。
+
+本协议基于二进制 WebSocket 消息实现音乐播放状态同步，包含播放控制、元数据传输、歌词同步等功能。协议使用小端字节序进行二进制序列化。
 
 ## 数据结构定义
 
@@ -13,10 +14,11 @@
 
 为便于阅读理解，以下定义了一部分常见数据结构：
 
-- `NullString`: 一个以 `\0` 结尾的 UTF-8 编码字符串
-- `Vec<T>`: 一个以一个 `u32` 开头作为数据结构 `T` 的数量的线性数据结构，后紧跟指定数量的 `T` 数据结构
+-   `NullString`: 一个以 `\0` 结尾的 UTF-8 编码字符串
+-   `Vec<T>`: 一个以一个 `u32` 开头作为数据结构 `T` 的数量的线性数据结构，后紧跟指定数量的 `T` 数据结构
 
 ### Artist 艺术家信息
+
 ```rust
 struct Artist {
     id: NullString,   // 艺术家的唯一标识字符串
@@ -25,6 +27,7 @@ struct Artist {
 ```
 
 ### LyricWord 歌词单词
+
 ```rust
 struct LyricWord {
     start_time: u64,  // 单词开始时间，单位为毫秒
@@ -34,6 +37,7 @@ struct LyricWord {
 ```
 
 ### LyricLine 歌词行
+
 ```rust
 struct LyricLine {
     start_time: u64,                // 歌词行开始时间，单位为毫秒
@@ -67,12 +71,12 @@ struct LyricLine {
 
 无需任何额外数据。
 
-### SetMusicId (2) (接收)
+### SetMusicInfo (2) (接收)
 
 报告当前歌曲的主要信息，提供以下数据：
 
 ```rust
-struct SetMusicId {
+struct SetMusicInfo {
     music_id: NullString,   // 歌曲的唯一标识字符串
     music_name: NullString, // 歌曲名称
     album_id: NullString,   // 歌曲所属的专辑ID，如果没有可以留空
@@ -227,6 +231,7 @@ struct SeekPlayProgress {
 ## 序列化/反序列化
 
 ### Rust 方法
+
 ```rust
 // 二进制 -> 结构体
 pub fn parse_body(body: &[u8]) -> anyhow::Result<Body>
@@ -237,64 +242,123 @@ pub fn to_body(body: &Body) -> anyhow::Result<Vec<u8>>
 
 ### WebAssembly 绑定
 
-对于 WASM 绑定库，所有的字段都将从下划线命名方式转换成小驼峰命名方式，例如 `img_url` 变为 `imgUrl`。
-
+对于 WASM 绑定库，所有的字段和名称都将从下划线命名方式转换成小驼峰命名方式，例如 `img_url` 变为 `imgUrl`。
 
 ```typescript
 // JavaScript 接口
-window.parseBody = function(body: Uint8Array): Promise<{
+export function parseBody(body: Uint8Array): {
     type: keyof Body,
     value: Body<any>,
 }>
-window.toBody = function(body: object): Promise<Uint8Array>
+export function toBody(body: Body<any>): Uint8Array
 ```
 
 且返回的 `Body` 结构将映射成以 `type` 为枚举类别名称，`value` 为附加数据的结构。
 
-以 `SetMusicId` 主体为例，映射为 TypeScript 数据类型后结构如下（接口名称不限）：
+以 `Ping` `SetMusicInfo` `SetMusicAlbumCoverImageURI` 主体为例，映射为 TypeScript 数据类型后结构如下（接口名称不限）：
 
 ```typescript
 interface Artist {
-    id: string,
-    name: string,
+    id: string;
+    name: string;
 }
 
-interface SetMusicIdBody {
-    type: "SetMusicId", // 和文档中标题注明的英文枚举名完全一致
+// 以 Ping 主体为例
+interface PingBody {
+    type: "ping"; // 和文档中标题注明的英文枚举名除了首字母小写外完全一致
+    // value: undefined; // 无需额外数据
+}
+
+// 以 SetMusicInfo 主体为例
+interface SetMusicInfoBody {
+    type: "setMusicInfo"; // 和文档中标题注明的英文枚举名除了首字母小写外完全一致
     value: {
-        musicId: string,   // 歌曲的唯一标识字符串
-        musicName: string, // 歌曲名称
-        albumId: string,   // 歌曲所属的专辑ID，如果没有可以留空
-        albumName: string, // 歌曲所属的专辑名称，如果没有可以留空
-        artists: Artist[], // 歌曲的艺术家/制作者列表
-        duration: number,  // 歌曲的时长，单位为毫秒
-    }
+        musicId: string; // 歌曲的唯一标识字符串
+        musicName: string; // 歌曲名称
+        albumId: string; // 歌曲所属的专辑ID，如果没有可以留空
+        albumName: string; // 歌曲所属的专辑名称，如果没有可以留空
+        artists: Artist[]; // 歌曲的艺术家/制作者列表
+        duration: number; // 歌曲的时长，单位为毫秒
+    };
+}
+
+// 以 SetMusicAlbumCoverImageURI 主体为例
+interface SetMusicAlbumCoverImageURIBody {
+    type: "setMusicAlbumCoverImageURI"; // 和文档中标题注明的英文枚举名除了首字母小写外完全一致
+    value: {
+        imgUrl: string; // 歌曲专辑图片对应的资源链接，可以为 HTTP URL 或 Base64 Data URI
+    };
 }
 ```
 
-## 使用示例
+## 使用示例 (TypeScript)
 
 ### 设置音乐信息
-```rust
-let body = Body::SetMusicId {
-    id: "123".into(),
-    name: "Sample Song".into(),
-    duration: 240000
-};
 
-let bin_data = to_body(&body)?;
-websocket.send(bin_data);
+```typescript
+import { toBody } from "@applemusic-like-lyrics/ws-protocol";
+
+const encoded = toBody({
+    type: "setMusicInfo",
+    value: {
+        musicId: "1",
+        musicName: "2",
+        albumId: "3",
+        albumName: "4",
+        artists: [
+            {
+                id: "5",
+                name: "6",
+            },
+        ],
+        duration: 7,
+    },
+});
+
+console.log(encoded); // Uint8Array
 ```
 
 ### 处理播放进度更新
+
+<!-- prettier-ignore-start -->
 ```typescript
-// 浏览器环境
-websocket.onmessage = async (event) => {
-    const data = new Uint8Array(await event.data.arrayBuffer());
-    const message = await window.parseBody(data);
-    
-    if (message.type === "onPlayProgress") {
-        audioElement.currentTime = message.value.progress;
+import { parseBody } from "@applemusic-like-lyrics/ws-protocol";
+
+const body = new Uint8Array(
+    [
+        0x02, 0x00, // SetMusicInfo
+        0x31, 0x00, // musicId: "1"
+        0x32, 0x00, // musidName: "2"
+        0x33, 0x00, // albumId: "3"
+        0x34, 0x00, // albumName: "4"
+        0x01, 0x00, 0x00, 0x00, // artists: size 1
+        0x35, 0x00, // artist.id: "5"
+        0x36, 0x00, // artist.name: "6"
+        0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 // duration: 7
+    ]
+);
+
+const parsed = parseBody(body);
+
+console.log(parsed);
+
+/* 预期输出：
+{
+    type: "setMusicInfo",
+    value: {
+        musicId: "1",
+        musicName: "2",
+        albumId: "3",
+        albumName: "4",
+        artists: [
+            {
+                id: "5",
+                name: "6"
+            }
+        ],
+        duration: 7
     }
 }
+*/
 ```
+<!-- prettier-ignore-end -->

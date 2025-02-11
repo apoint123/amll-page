@@ -173,7 +173,23 @@ fn body_test() {
         }],
         duration: 7,
     };
+    let encoded = to_body(&body).unwrap();
+    // print hex
+    print!("[");
+    for byte in &encoded {
+        print!("0x{:02x}, ", byte);
+    }
+    println!("]");
+    assert_eq!(parse_body(&encoded).unwrap(), body);
+    println!("{}", serde_json::to_string_pretty(&body).unwrap());
+    let body = Body::SetMusicAlbumCoverImageURI {
+        img_url: "https://example.com".into(),
+    };
     assert_eq!(parse_body(&to_body(&body).unwrap()).unwrap(), body);
+    println!("{}", serde_json::to_string_pretty(&body).unwrap());
+    let body = Body::Ping;
+    assert_eq!(parse_body(&to_body(&body).unwrap()).unwrap(), body);
+    println!("{}", serde_json::to_string_pretty(&body).unwrap());
 }
 
 #[cfg(target_arch = "wasm32")]
