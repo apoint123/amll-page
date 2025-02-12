@@ -3,11 +3,11 @@ const SAFE_FLAG_CHUNK_SIZE = Number.MAX_SAFE_INTEGER.toString(2).length;
 export class FlagSets {
 	private flags: number[] = [];
 	private _size = 0;
-	
+
 	get size() {
 		return this._size;
 	}
-	
+
 	[Symbol.iterator]() {
 		let flag = 0;
 		let chunkIndex = 0;

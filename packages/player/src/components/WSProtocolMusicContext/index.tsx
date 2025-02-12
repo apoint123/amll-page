@@ -10,6 +10,7 @@ import {
 	musicPlayingAtom,
 	musicPlayingPositionAtom,
 	onChangeVolumeAtom,
+	onLyricLineClickAtom,
 	onPlayOrResumeAtom,
 	onRequestNextSongAtom,
 	onRequestPrevSongAtom,
@@ -84,7 +85,15 @@ export const WSProtocolMusicContext: FC = () => {
 			onSeekPositionAtom,
 			toEmit((progress) => {
 				sendWSMessage("seekPlayProgress", {
-					progress,
+					progress: progress | 0,
+				});
+			}),
+		);
+		store.set(
+			onLyricLineClickAtom,
+			toEmit((evt) => {
+				sendWSMessage("seekPlayProgress", {
+					progress: evt.line.getLine().startTime | 0,
 				});
 			}),
 		);
@@ -202,7 +211,6 @@ export const WSProtocolMusicContext: FC = () => {
 					break;
 				}
 				case "onPlayProgress": {
-					store.set(musicPlayingAtom, true);
 					store.set(musicPlayingPositionAtom, payload.value.progress);
 					break;
 				}

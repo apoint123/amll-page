@@ -19,6 +19,7 @@ import {
 	saturateImage,
 } from "../img.ts";
 import { generateControlPoints } from "./cp-generate.ts";
+import { CONTROL_POINT_PRESETS } from "./cp-presets.ts";
 import meshFragShader from "./mesh.frag.glsl?raw";
 import meshVertShader from "./mesh.vert.glsl?raw";
 
@@ -1013,7 +1014,12 @@ export class MeshGradientRenderer extends BaseRenderer {
 			);
 			newMesh.resetSubdivition(15);
 
-			const chosenPreset = generateControlPoints(6, 6);
+			const chosenPreset =
+				Math.random() > 0.8
+					? generateControlPoints(6, 6)
+					: CONTROL_POINT_PRESETS[
+							Math.floor(Math.random() * CONTROL_POINT_PRESETS.length)
+						];
 
 			newMesh.resizeControlPoints(chosenPreset.width, chosenPreset.height);
 			const uPower = 2 / (chosenPreset.width - 1);

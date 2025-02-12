@@ -32,6 +32,14 @@ export function parseTTML(ttmlText: string): TTMLLyric {
 		"application/xml",
 	);
 
+	if (
+		ttmlDoc.getRootNode({
+			composed: true,
+		}).firstChild?.nodeName !== "tt"
+	) {
+		throw new TypeError("不是有效的 TTML 文档");
+	}
+
 	let mainAgentId = "v1";
 
 	const metadata: TTMLMetadata[] = [];
@@ -142,7 +150,10 @@ export function parseTTML(ttmlText: string): TTMLLyric {
 		} else {
 			line.startTime = line.words
 				.filter((v) => v.word.trim().length > 0)
-				.reduce((pv, cv) => Math.min(pv, cv.startTime), Infinity);
+				.reduce(
+					(pv, cv) => Math.min(pv, cv.startTime),
+					Number.POSITIVE_INFINITY,
+				);
 			line.endTime = line.words
 				.filter((v) => v.word.trim().length > 0)
 				.reduce((pv, cv) => Math.max(pv, cv.endTime), 0);
