@@ -37,6 +37,11 @@ export const backgroundRendererAtom = atomWithStorage(
 	"mesh",
 );
 
+export const cssBackgroundPropertyAtom = atomWithStorage(
+	"amll-player.cssBackgroundProperty",
+	"#111111",
+);
+
 export const fftDataRangeAtom = atomWithStorage(
 	"amll-player.fftDataRange",
 	[80, 2000],

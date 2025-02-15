@@ -202,13 +202,14 @@ export const globalLyricTimelineOffsetAtom = atomWithStorage(
 
 /**
  * 配置所使用的歌词背景渲染器，默认使用 MeshGradientRenderer
+ * 如果是字符串则将其放入背景所属的 CSS 样式中（background 属性内）
  *
  * 由于存储状态特殊，故不使用 atomWithStorage，请另外处理配置存储
  *
  * 性能影响情况：高
  */
 export const lyricBackgroundRendererAtom = atom<{
-	renderer?: BackgroundRenderProps["renderer"];
+	renderer?: BackgroundRenderProps["renderer"] | string;
 }>({
 	renderer: undefined,
 });

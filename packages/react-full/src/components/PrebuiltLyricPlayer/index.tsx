@@ -416,18 +416,32 @@ export const PrebuiltLyricPlayer: FC<HTMLProps<HTMLDivElement>> = ({
 					/>
 				}
 				backgroundSlot={
-					<BackgroundRender
-						album={musicCover}
-						albumIsVideo={musicCoverIsVideo}
-						lowFreqVolume={lowFreqVolume}
-						renderScale={lyricBackgroundRenderScale}
-						fps={lyricBackgroundFPS}
-						renderer={backgroundRenderer.renderer}
-						staticMode={lyricBackgroundStaticMode || !isLyricPageOpened}
-						style={{
-							zIndex: -1,
-						}}
-					/>
+					typeof backgroundRenderer.renderer === "string" ? (
+						<div
+							style={{
+								zIndex: -1,
+								width: "100%",
+								height: "100%",
+								minWidth: "0",
+								minHeight: "0",
+								overflow: "hidden",
+								background: backgroundRenderer.renderer,
+							}}
+						/>
+					) : (
+						<BackgroundRender
+							album={musicCover}
+							albumIsVideo={musicCoverIsVideo}
+							lowFreqVolume={lowFreqVolume}
+							renderScale={lyricBackgroundRenderScale}
+							fps={lyricBackgroundFPS}
+							renderer={backgroundRenderer.renderer}
+							staticMode={lyricBackgroundStaticMode || !isLyricPageOpened}
+							style={{
+								zIndex: -1,
+							}}
+						/>
+					)
 				}
 				bigControlsSlot={
 					<>

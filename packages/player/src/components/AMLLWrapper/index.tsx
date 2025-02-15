@@ -19,6 +19,7 @@ import { type FC, useLayoutEffect } from "react";
 import {
 	LyricPlayerImplementation,
 	backgroundRendererAtom,
+	cssBackgroundPropertyAtom,
 	lyricPlayerImplementationAtom,
 } from "../../states/index.ts";
 import { AMLLContextMenuContent } from "../AMLLContextMenu/index.tsx";
@@ -28,6 +29,7 @@ import styles from "./index.module.css";
 export const AMLLWrapper: FC = () => {
 	const isLyricPageOpened = useAtomValue(isLyricPageOpenedAtom);
 	const backgroundRenderer = useAtomValue(backgroundRendererAtom);
+	const cssBackgroundProperty = useAtomValue(cssBackgroundPropertyAtom);
 	const lyricPlayerImplementation = useAtomValue(lyricPlayerImplementationAtom);
 	const setBackgroundRenderer = useSetAtom(lyricBackgroundRendererAtom);
 	const setLyricPlayerImplementation = useSetAtom(
@@ -51,13 +53,18 @@ export const AMLLWrapper: FC = () => {
 					renderer: PixiRenderer,
 				});
 				break;
-			default:
+			case "mesh":
 				setBackgroundRenderer({
 					renderer: MeshGradientRenderer,
 				});
 				break;
+			default:
+				setBackgroundRenderer({
+					renderer: cssBackgroundProperty,
+				});
+				break;
 		}
-	}, [backgroundRenderer, setBackgroundRenderer]);
+	}, [backgroundRenderer, cssBackgroundProperty, setBackgroundRenderer]);
 
 	useLayoutEffect(() => {
 		switch (lyricPlayerImplementation) {

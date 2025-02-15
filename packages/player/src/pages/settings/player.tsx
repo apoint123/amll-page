@@ -60,6 +60,7 @@ import {
 	LyricPlayerImplementation,
 	advanceLyricDynamicLyricTimeAtom,
 	backgroundRendererAtom,
+	cssBackgroundPropertyAtom,
 	darkModeAtom,
 	displayLanguageAtom,
 	fftDataRangeAtom,
@@ -334,6 +335,90 @@ const LyricFontSetting: FC = () => {
 	);
 };
 
+const CSSBasedSettings: FC = () => {
+	const backgroundRenderer = useAtomValue(backgroundRendererAtom);
+	const [cssBackgroundProperty, setCssBackgroundProperty] = useAtom(
+		cssBackgroundPropertyAtom,
+	);
+	const { t } = useTranslation();
+
+	if (backgroundRenderer !== "css-bg") return null;
+
+	return (
+		<>
+			<SettingEntry
+				label={t(
+					"page.settings.lyricBackground.lyricBackgroundColor.label",
+					"CSS 背景属性值",
+				)}
+				description={t(
+					"page.settings.lyricBackground.lyricBackgroundColor.description",
+					"等同于放入 background 样式的字符串值，默认为 #111111",
+				)}
+			>
+				<TextField.Root
+					value={cssBackgroundProperty}
+					onChange={(e) => setCssBackgroundProperty(e.currentTarget.value)}
+				/>
+			</SettingEntry>
+		</>
+	);
+};
+
+const RendererBasedSettings: FC = () => {
+	const backgroundRenderer = useAtomValue(backgroundRendererAtom);
+	const { t } = useTranslation();
+
+	if (!["mesh", "pixi"].includes(backgroundRenderer)) return null;
+	return (
+		<>
+			<NumberSettings
+				placeholder="60"
+				type="number"
+				min="1"
+				max="1000"
+				step="1"
+				label={t(
+					"page.settings.lyricBackground.lyricBackgroundFPS.label",
+					"背景最高帧数",
+				)}
+				description={t(
+					"page.settings.lyricBackground.lyricBackgroundFPS.description",
+					"对性能影响较高，但是实际开销不大，如果遇到性能问题，可以尝试降低此值。默认值为 60。",
+				)}
+				configAtom={lyricBackgroundFPSAtom}
+			/>
+			<NumberSettings
+				placeholder="1.0"
+				type="number"
+				min="0.01"
+				max="10.0"
+				step="0.01"
+				label={t(
+					"page.settings.lyricBackground.lyricBackgroundRenderScale.label",
+					"背景渲染倍率",
+				)}
+				description={t(
+					"page.settings.lyricBackground.lyricBackgroundRenderScale.description",
+					"对性能影响较高，但是实际开销不大，如果遇到性能问题，可以尝试降低此值。默认值为 1 即每像素点渲染。",
+				)}
+				configAtom={lyricBackgroundRenderScaleAtom}
+			/>
+			<SwitchSettings
+				label={t(
+					"page.settings.lyricBackground.lyricBackgroundStaticMode.label",
+					"背景静态模式",
+				)}
+				description={t(
+					"page.settings.lyricBackground.lyricBackgroundStaticMode.description",
+					"让背景会在除了切换歌曲变换封面的情况下保持静止，如果遇到了性能问题，可以考虑开启此项。\n注意：启用此项会导致背景跳动效果失效。",
+				)}
+				configAtom={lyricBackgroundStaticModeAtom}
+			/>
+		</>
+	);
+};
+
 const appVersionAtom = loadable(atom(() => getVersion()));
 
 export const PlayerSettingsTab: FC = () => {
@@ -490,6 +575,13 @@ export const PlayerSettingsTab: FC = () => {
 					"PixiJS 渲染器",
 				),
 				value: "pixi",
+			},
+			{
+				label: t(
+					"page.settings.lyricBackground.menu.cssBackground",
+					"CSS 背景",
+				),
+				value: "css-bg",
 			},
 		],
 		[t],
@@ -751,49 +843,8 @@ export const PlayerSettingsTab: FC = () => {
 				configAtom={backgroundRendererAtom}
 			/>
 
-			<NumberSettings
-				placeholder="60"
-				type="number"
-				min="1"
-				max="1000"
-				step="1"
-				label={t(
-					"page.settings.lyricBackground.lyricBackgroundFPS.label",
-					"背景最高帧数",
-				)}
-				description={t(
-					"page.settings.lyricBackground.lyricBackgroundFPS.description",
-					"对性能影响较高，但是实际开销不大，如果遇到性能问题，可以尝试降低此值。默认值为 60。",
-				)}
-				configAtom={lyricBackgroundFPSAtom}
-			/>
-			<NumberSettings
-				placeholder="1.0"
-				type="number"
-				min="0.01"
-				max="10.0"
-				step="0.01"
-				label={t(
-					"page.settings.lyricBackground.lyricBackgroundRenderScale.label",
-					"背景渲染倍率",
-				)}
-				description={t(
-					"page.settings.lyricBackground.lyricBackgroundRenderScale.description",
-					"对性能影响较高，但是实际开销不大，如果遇到性能问题，可以尝试降低此值。默认值为 1 即每像素点渲染。",
-				)}
-				configAtom={lyricBackgroundRenderScaleAtom}
-			/>
-			<SwitchSettings
-				label={t(
-					"page.settings.lyricBackground.lyricBackgroundStaticMode.label",
-					"背景静态模式",
-				)}
-				description={t(
-					"page.settings.lyricBackground.lyricBackgroundStaticMode.description",
-					"让背景会在除了切换歌曲变换封面的情况下保持静止，如果遇到了性能问题，可以考虑开启此项。\n注意：启用此项会导致背景跳动效果失效。",
-				)}
-				configAtom={lyricBackgroundStaticModeAtom}
-			/>
+			<CSSBasedSettings />
+			<RendererBasedSettings />
 
 			<SubTitle>
 				<Trans i18nKey="page.settings.others.subtitle">杂项</Trans>
