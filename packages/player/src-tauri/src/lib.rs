@@ -3,11 +3,11 @@ use amll_player_core::AudioInfo;
 use serde::*;
 use serde_json::Value;
 use std::sync::RwLock;
-use std::{net::SocketAddr, path::Path};
+use std::net::SocketAddr;
 use symphonia::core::io::{MediaSourceStream, MediaSourceStreamOptions};
 use tauri::{
     utils::config::WindowEffectsConfig, window::Effect, AppHandle, Manager, PhysicalSize, Runtime,
-    Size, State, Theme, WebviewWindowBuilder,
+    Size, State, WebviewWindowBuilder,
 };
 use tauri_plugin_fs::OpenOptions;
 use tracing::*;

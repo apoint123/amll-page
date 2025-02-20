@@ -1,8 +1,6 @@
-use std::{path::Path, str::FromStr};
 
 use amll_player_core::*;
 use tauri::{Emitter, Manager, Runtime};
-use tauri_plugin_fs::*;
 use tokio::sync::RwLock;
 use tracing::warn;
 
@@ -18,7 +16,7 @@ pub async fn local_player_send_msg(msg: AudioThreadEventMessage<AudioThreadMessa
 }
 
 async fn local_player_main<R: Runtime>(manager: impl Manager<R> + Clone + Send + Sync + 'static) {
-    let mut player = AudioPlayer::new(AudioPlayerConfig {});
+    let player = AudioPlayer::new(AudioPlayerConfig {});
     let handler = player.handler();
     PLAYER_HANDLER.write().await.replace(handler);
 

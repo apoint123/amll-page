@@ -13,20 +13,20 @@ pub enum DES_MODE {
     DES_ENCRYPT = 0,
     DES_DECRYPT = 1,
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " FUNCTION DECLARATIONS"]
     pub fn des_key_setup(key: *const BYTE, schedule: *mut [BYTE; 6usize], mode: DES_MODE);
 }
-extern "C" {
+unsafe extern "C" {
     pub fn des_crypt(in_: *const BYTE, out: *mut BYTE, key: *const [BYTE; 6usize]);
 }
-extern "C" {
+unsafe extern "C" {
     pub fn three_des_key_setup(
         key: *const BYTE,
         schedule: *mut [[BYTE; 6usize]; 16usize],
         mode: DES_MODE,
     );
 }
-extern "C" {
+unsafe extern "C" {
     pub fn three_des_crypt(in_: *const BYTE, out: *mut BYTE, key: *mut [[BYTE; 6usize]; 16usize]);
 }

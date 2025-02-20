@@ -5,7 +5,7 @@ description = "AMLL Player"
 authors = ["you"]
 license = ""
 repository = ""
-edition = "2021"
+edition = "2024"
 
 [lib]
 crate-type = ["staticlib", "cdylib", "lib"]
