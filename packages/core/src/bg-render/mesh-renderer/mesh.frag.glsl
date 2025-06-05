@@ -22,12 +22,12 @@ vec2 rot(vec2 v, float a) {
 
 void main() {
     float dither = (1.0 / 255.0) * gradientNoise(gl_FragCoord.xy) - (0.5 / 255.0);
-    vec2 centeredUV = v_uv - vec2(0.5);
+    vec2 centeredUV = v_uv - vec2(0.2);
     vec2 rotatedUV = rot(centeredUV, (u_time + u_volume) * 2.0);
-    vec2 finalUV = rotatedUV + vec2(0.5);
+    vec2 finalUV = rotatedUV * max(0.001, 1.0 - u_volume * 2.0) + vec2(0.5);
     vec4 result = texture2D(u_texture, finalUV);
     result *= vec4(v_color, u_alpha);
-    result *= vec4(1.0 - u_volume * 0.1);
+    result *= vec4(max(0.5, 1.0 - u_volume / 2.0));
     result += vec4(dither);
     gl_FragColor = result;
 }
