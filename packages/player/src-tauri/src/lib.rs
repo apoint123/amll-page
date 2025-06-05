@@ -1,6 +1,6 @@
 use crate::server::AMLLWebSocketServer;
 use amll_player_core::AudioInfo;
-use screenshot::take_screenshot;
+use screen_capture::take_screenshot;
 use serde::*;
 use serde_json::Value;
 use std::net::SocketAddr;
@@ -16,7 +16,7 @@ use tracing::*;
 
 mod client;
 mod player;
-mod screenshot;
+mod screen_capture;
 mod server;
 
 pub type AMLLWebSocketServerWrapper = RwLock<AMLLWebSocketServer>;
@@ -314,7 +314,7 @@ pub fn run() {
             ws_get_connections,
             ws_boardcast_message,
             open_screenshot_window,
-            screenshot::take_screenshot,
+            screen_capture::take_screenshot,
             player::local_player_send_msg,
             read_local_music_metadata,
             restart_app,

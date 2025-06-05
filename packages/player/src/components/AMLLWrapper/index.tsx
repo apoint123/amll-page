@@ -25,6 +25,7 @@ import {
 import { AMLLContextMenuContent } from "../AMLLContextMenu/index.tsx";
 import { AudioQualityDialog } from "../AudioQualityDialog/index.tsx";
 import styles from "./index.module.css";
+import { RecordPanel } from "../RecordPanel/index.tsx";
 
 export const AMLLWrapper: FC = () => {
 	const isLyricPageOpened = useAtomValue(isLyricPageOpenedAtom);
@@ -96,6 +97,7 @@ export const AMLLWrapper: FC = () => {
 			<ContextMenu.Root>
 				<ContextMenu.Trigger>
 					<PrebuiltLyricPlayer
+						id="amll-lyric-player"
 						className={classnames(
 							styles.lyricPage,
 							isLyricPageOpened && styles.opened,
@@ -105,6 +107,7 @@ export const AMLLWrapper: FC = () => {
 				<AMLLContextMenuContent />
 			</ContextMenu.Root>
 			<AudioQualityDialog />
+			<RecordPanel />
 		</>
 	);
 };

@@ -17,6 +17,7 @@ export const isDarkThemeAtom = atom((get) => {
 
 export const musicIdAtom = atom("");
 export const playlistCardOpenedAtom = atom(false);
+export const recordPanelOpenedAtom = atom(false);
 export const currentPlaylistAtom = atom<SongData[]>([]);
 export const currentPlaylistMusicIndexAtom = atom(0);
 export const musicQualityAtom = atom({

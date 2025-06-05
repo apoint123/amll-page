@@ -11,12 +11,13 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import type { FC } from "react";
 import { Trans } from "react-i18next";
 import { router } from "../../router.tsx";
-import { musicIdAtom } from "../../states/index.ts";
+import { musicIdAtom, recordPanelOpenedAtom } from "../../states/index.ts";
 import { invoke } from "@tauri-apps/api/core";
 
 export const AMLLContextMenuContent: FC = () => {
 	const [hideLyricView, setHideLyricView] = useAtom(hideLyricViewAtom);
 	const setLyricPageOpened = useSetAtom(isLyricPageOpenedAtom);
+	const setRecordPanelOpened = useSetAtom(recordPanelOpenedAtom);
 	const onRequestPrevSong = useAtomValue(onRequestPrevSongAtom).onEmit;
 	const onRequestNextSong = useAtomValue(onRequestNextSongAtom).onEmit;
 	const onPlayOrResume = useAtomValue(onPlayOrResumeAtom).onEmit;
@@ -64,6 +65,13 @@ export const AMLLContextMenuContent: FC = () => {
 				</Trans>
 			</ContextMenu.Item>
 			<ContextMenu.Separator />
+			<ContextMenu.Item
+				onClick={() => {
+					setRecordPanelOpened(true)
+				}}
+			>
+				<Trans i18nKey="amll.contextMenu.openRecorder">打开捕获面板</Trans>
+			</ContextMenu.Item>
 			<ContextMenu.Item
 				onClick={() => {
 					invoke("open_screenshot_window");

@@ -56,6 +56,7 @@
 		"react-viewport-list": "^7.1.2",
 		"react-virtualized-auto-sizer": "^1.0.24",
 		"sass": "^1.80.7",
+		"save-file": "^2.3.1",
 		"semver": "^7.6.3",
 		"source-map-js": "^1.2.1",
 		"stats.js": "^0.17.0",
