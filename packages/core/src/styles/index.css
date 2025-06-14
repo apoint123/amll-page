@@ -11,35 +11,7 @@
 	color: var(--amll-lp-color, white);
 	contain: strict;
 	mix-blend-mode: plus-lighter;
-	font-size: var(--amll-lp-font-size);
-	font-weight: 600;
-	font-family: SF Pro SC, SF Pro Display, SF Pro Icons, PingFang SC, Helvetica Neue, Helvetica, Arial, sans-serif;
-
-	--amll-lp-font-size: 28px;
-	--amll-lp-supplementary-font-size: calc(var(--amll-lp-font-size)*.5);
-	--amll-lp-secondary-font-size: calc(var(--amll-lp-font-size)*.42);
-
-	@media screen and (min-width: 1320px) {
-		& {
-			--amll-lp-font-size: 38px;
-			--amll-lp-line-height: 1.2105263158;
-		}
-	}
-
-	@media screen and (min-width: 1680px) {
-		& {
-			--amll-lp-font-size: 50px;
-			--amll-lp-line-height: 1.2;
-		}
-	}
-
-	@media (min-width: 2000px) {
-		& {
-			--amll-lp-font-size: 72px;
-			--amll-lp-line-height: 1.1947644444;
-		}
-	}
-
+	font-size: var(--amll-lp-font-size, max(max(4.7vh, 3.2vw), 12px));
 
 	@media screen and (max-width: 768px) {
 		font-size: var(--amll-lp-font-size, max(8vw, 12px));
@@ -75,7 +47,7 @@
 			opacity: 1;
 		}
 
-		>* {
+		> * {
 			content-visibility: auto;
 			contain-intrinsic-size: 100% 2em;
 		}
