@@ -1,4 +1,3 @@
-
 use amll_player_core::*;
 use tauri::{Emitter, Manager, Runtime};
 use tokio::sync::RwLock;
@@ -16,6 +15,9 @@ pub async fn local_player_send_msg(msg: AudioThreadEventMessage<AudioThreadMessa
 }
 
 async fn local_player_main<R: Runtime>(manager: impl Manager<R> + Clone + Send + Sync + 'static) {
+    #[cfg(mobile)]
+    let mut player = AudioPlayer::new(AudioPlayerConfig {});
+    #[cfg(not(mobile))]
     let player = AudioPlayer::new(AudioPlayerConfig {});
     let handler = player.handler();
     PLAYER_HANDLER.write().await.replace(handler);
@@ -23,6 +25,9 @@ async fn local_player_main<R: Runtime>(manager: impl Manager<R> + Clone + Send +
     let manager_clone = manager.clone();
     #[cfg(mobile)]
     player.set_custom_local_song_loader(Box::new(move |path| {
+        use std::str::FromStr;
+        use tauri_plugin_fs::FsExt;
+        use tauri_plugin_fs::OpenOptions;
         let manager_clone = manager_clone.clone();
         Box::new(async move {
             let fs = manager_clone.fs();

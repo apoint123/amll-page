@@ -4,6 +4,7 @@ use screen_capture::take_screenshot;
 use serde::*;
 use serde_json::Value;
 use std::net::SocketAddr;
+use std::str::FromStr as _;
 use std::sync::RwLock;
 use symphonia::core::io::{MediaSourceStream, MediaSourceStreamOptions};
 use tauri::ipc::Channel;
@@ -11,6 +12,7 @@ use tauri::{
     AppHandle, Manager, PhysicalSize, Runtime, Size, State, WebviewWindowBuilder,
     utils::config::WindowEffectsConfig, window::Effect,
 };
+use tauri_plugin_fs::FsExt as _;
 use tauri_plugin_fs::OpenOptions;
 use tracing::*;
 

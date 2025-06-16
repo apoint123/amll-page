@@ -11,135 +11,142 @@ pub async fn take_screenshot(
     target_height: u32,
     recover_size: bool,
 ) -> anyhow_tauri::TAResult<String> {
-    let win = app.get_webview_window("main");
-
-    let win = if let Some(win) = win {
-        win
-    } else {
-        anyhow_tauri::bail!("Main window not found")
-    };
-
-    let orig_size = win.inner_size().into_ta_result()?;
-    if resize_window {
-        win.set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
-            target_width,
-            target_height,
-        )))
-        .into_ta_result()?;
-        win.set_resizable(false).into_ta_result()?;
-    }
-
-    let mut result = String::new();
-
-    #[cfg(target_os = "windows")]
+    #[cfg(mobile)]
     {
-        let win = win.clone();
-        #[derive(serde::Deserialize, Debug)]
-        struct ScreenshotResult {
-            data: String,
+        anyhow_tauri::bail!("Screenshot capture is not supported on Android");
+    }
+    #[cfg(not(mobile))]
+    {
+        let win = app.get_webview_window("main");
+
+        let win = if let Some(win) = win {
+            win
+        } else {
+            anyhow_tauri::bail!("Main window not found")
+        };
+
+        let orig_size = win.inner_size().into_ta_result()?;
+        if resize_window {
+            win.set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
+                target_width,
+                target_height,
+            )))
+            .into_ta_result()?;
+            win.set_resizable(false).into_ta_result()?;
         }
 
-        struct DevToolsRunner(tauri::WebviewWindow<tauri::Wry>);
+        let mut result = String::new();
 
-        impl DevToolsRunner {
-            async fn run(
-                &self,
-                name: &'static str,
-                json_data: serde_json::Value,
-            ) -> anyhow::Result<String> {
-                use anyhow::Context;
-                use webview2_com::CallDevToolsProtocolMethodCompletedHandler;
-                let (os_sx, os_rx) = tokio::sync::oneshot::channel();
-
-                let json_data =
-                    serde_json::to_string(&json_data).expect("Failed to serialize JSON data");
-
-                self.0
-                    .with_webview(move |webview| {
-                        let ctl = webview.controller();
-                        unsafe {
-                            let core_wv = ctl.CoreWebView2().unwrap();
-                            let name = webview2_com::pwstr_from_str(name);
-                            let json_data = webview2_com::pwstr_from_str(&json_data);
-                            let handler = CallDevToolsProtocolMethodCompletedHandler::create(
-                                Box::new(move |a, b| {
-                                    os_sx.send((a, b)).expect(
-                                        "Failed to send response from DevTools protocol method",
-                                    );
-                                    Ok(())
-                                }),
-                            );
-
-                            core_wv
-                                .CallDevToolsProtocolMethod(name, json_data, Some(&handler))
-                                .unwrap();
-                        }
-                    })
-                    .unwrap();
-
-                let result = os_rx.await.unwrap();
-                result
-                    .0
-                    .map(|_| result.1)
-                    .context("Failed to call DevTools protocol method")
+        #[cfg(target_os = "windows")]
+        {
+            let win = win.clone();
+            #[derive(serde::Deserialize, Debug)]
+            struct ScreenshotResult {
+                data: String,
             }
 
-            // async fn set_viewport_size(
-            //     &self,
-            //     width: u32,
-            //     height: u32,
-            //     scale: f32,
-            // ) -> anyhow::Result<()> {
-            //     let json_data = serde_json::json!({
-            //         "width": width,
-            //         "height": height,
-            //         "deviceScaleFactor": scale,
-            //     });
-            //     self.run("Emulation.setDeviceMetricsOverride", json_data)
-            //         .await?;
-            //     Ok(())
-            // }
+            struct DevToolsRunner(tauri::WebviewWindow<tauri::Wry>);
 
-            async fn take_screenshot(&self) -> anyhow::Result<String> {
-                // use base64::Engine;
+            impl DevToolsRunner {
+                async fn run(
+                    &self,
+                    name: &'static str,
+                    json_data: serde_json::Value,
+                ) -> anyhow::Result<String> {
+                    use anyhow::Context;
+                    use webview2_com::CallDevToolsProtocolMethodCompletedHandler;
+                    let (os_sx, os_rx) = tokio::sync::oneshot::channel();
 
-                let json_data = serde_json::json!({
-                    "format": "png",
-                    "optimizeForSpeed": true,
-                });
-                let res = self.run("Page.captureScreenshot", json_data).await?;
+                    let json_data =
+                        serde_json::to_string(&json_data).expect("Failed to serialize JSON data");
 
-                let res = serde_json::from_str::<ScreenshotResult>(&res)?;
-                // let data = base64::engine::general_purpose::STANDARD.decode(res.data)?;
-                // let img = image::load_from_memory_with_format(&data, image::ImageFormat::Png)?;
-                Ok(res.data)
+                    self.0
+                        .with_webview(move |webview| {
+                            let ctl = webview.controller();
+                            unsafe {
+                                let core_wv = ctl.CoreWebView2().unwrap();
+                                let name = webview2_com::pwstr_from_str(name);
+                                let json_data = webview2_com::pwstr_from_str(&json_data);
+                                let handler = CallDevToolsProtocolMethodCompletedHandler::create(
+                                    Box::new(move |a, b| {
+                                        os_sx.send((a, b)).expect(
+                                            "Failed to send response from DevTools protocol method",
+                                        );
+                                        Ok(())
+                                    }),
+                                );
+
+                                core_wv
+                                    .CallDevToolsProtocolMethod(name, json_data, Some(&handler))
+                                    .unwrap();
+                            }
+                        })
+                        .unwrap();
+
+                    let result = os_rx.await.unwrap();
+                    result
+                        .0
+                        .map(|_| result.1)
+                        .context("Failed to call DevTools protocol method")
+                }
+
+                // async fn set_viewport_size(
+                //     &self,
+                //     width: u32,
+                //     height: u32,
+                //     scale: f32,
+                // ) -> anyhow::Result<()> {
+                //     let json_data = serde_json::json!({
+                //         "width": width,
+                //         "height": height,
+                //         "deviceScaleFactor": scale,
+                //     });
+                //     self.run("Emulation.setDeviceMetricsOverride", json_data)
+                //         .await?;
+                //     Ok(())
+                // }
+
+                async fn take_screenshot(&self) -> anyhow::Result<String> {
+                    // use base64::Engine;
+
+                    let json_data = serde_json::json!({
+                        "format": "png",
+                        "optimizeForSpeed": true,
+                    });
+                    let res = self.run("Page.captureScreenshot", json_data).await?;
+
+                    let res = serde_json::from_str::<ScreenshotResult>(&res)?;
+                    // let data = base64::engine::general_purpose::STANDARD.decode(res.data)?;
+                    // let img = image::load_from_memory_with_format(&data, image::ImageFormat::Png)?;
+                    Ok(res.data)
+                }
             }
+
+            let dev_tools_runner = DevToolsRunner(win);
+
+            // dev_tools_runner
+            //     .set_viewport_size(target_width, target_height, target_scale)
+            //     .await
+            //     .context("Failed to set viewport size")?;
+
+            if resize_window {
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            }
+            result = dev_tools_runner.take_screenshot().await?;
+            // dev_tools_runner
+            //     .set_viewport_size(0, 0, 0f32)
+            //     .await
+            //     .context("Failed to set viewport size")?;
         }
-
-        let dev_tools_runner = DevToolsRunner(win);
-
-        // dev_tools_runner
-        //     .set_viewport_size(target_width, target_height, target_scale)
-        //     .await
-        //     .context("Failed to set viewport size")?;
 
         if resize_window {
-            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            if recover_size {
+                win.set_size(tauri::Size::Physical(orig_size))
+                    .into_ta_result()?;
+            }
+            win.set_resizable(true).into_ta_result()?;
         }
-        result = dev_tools_runner.take_screenshot().await?;
-        // dev_tools_runner
-        //     .set_viewport_size(0, 0, 0f32)
-        //     .await
-        //     .context("Failed to set viewport size")?;
-    }
 
-    if resize_window {
-        if recover_size {
-            win.set_size(tauri::Size::Physical(orig_size))
-                .into_ta_result()?;
-        }
-        win.set_resizable(true).into_ta_result()?;
+        Ok(result)
     }
-
-    Ok(result)
 }

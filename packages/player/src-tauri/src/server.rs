@@ -8,10 +8,10 @@ use async_tungstenite::WebSocketStream;
 use async_tungstenite::tungstenite::Message;
 use futures::prelude::*;
 use futures::stream::SplitSink;
+use tauri::ipc::Channel;
 use tauri::{AppHandle, Emitter};
 use tracing::*;
 use ws_protocol::Body;
-use tauri::ipc::Channel;
 
 type Connections = Arc<AsyncRwLock<Vec<SplitSink<WebSocketStream<TcpStream>, Message>>>>;
 type ConnectionAddrs = Arc<StdRwLock<HashSet<SocketAddr>>>;
