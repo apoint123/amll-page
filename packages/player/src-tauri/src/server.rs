@@ -1,25 +1,27 @@
 use std::{collections::HashSet, net::SocketAddr, sync::Arc};
 use std::{sync::RwLock as StdRwLock, time::Duration};
 
-use async_std::net::{TcpListener, TcpStream};
-use async_std::sync::RwLock as AsyncRwLock;
-use async_std::task::{JoinHandle, block_on};
-use async_tungstenite::WebSocketStream;
 use async_tungstenite::tungstenite::Message;
+use async_tungstenite::{WebSocketStream, tokio::TokioAdapter};
 use futures::prelude::*;
 use futures::stream::SplitSink;
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Emitter};
+use tokio::{
+    net::{TcpListener, TcpStream},
+    sync::RwLock,
+    task::JoinHandle,
+};
 use tracing::*;
-use ws_protocol::Body;
 
-type Connections = Arc<AsyncRwLock<Vec<SplitSink<WebSocketStream<TcpStream>, Message>>>>;
+type Connections = Arc<RwLock<Vec<SplitSink<WebSocketStream<TokioAdapter<TcpStream>>, Message>>>>;
 type ConnectionAddrs = Arc<StdRwLock<HashSet<SocketAddr>>>;
 pub struct AMLLWebSocketServer {
     app: AppHandle,
     server_handle: Option<JoinHandle<()>>,
     connections: Connections,
     connection_addrs: ConnectionAddrs,
+    async_runtime: tokio::runtime::Runtime,
 }
 
 impl AMLLWebSocketServer {
@@ -27,13 +29,17 @@ impl AMLLWebSocketServer {
         Self {
             app,
             server_handle: None,
-            connections: Arc::new(AsyncRwLock::new(Vec::with_capacity(8))),
+            connections: Arc::new(RwLock::new(Vec::with_capacity(8))),
             connection_addrs: Arc::new(StdRwLock::new(HashSet::with_capacity(8))),
+            async_runtime: tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .expect("Failed to create Tokio runtime"),
         }
     }
     pub fn reopen(&mut self, addr: String, channel: Channel<ws_protocol::Body>) {
         if let Some(task) = self.server_handle.take() {
-            block_on(task.cancel());
+            task.abort();
         }
         if addr.is_empty() {
             info!("WebSocket 服务器已关闭");
@@ -42,7 +48,7 @@ impl AMLLWebSocketServer {
         let app = self.app.clone();
         let connections = self.connections.clone();
         let conn_addrs = self.connection_addrs.clone();
-        self.server_handle = Some(async_std::task::spawn(async move {
+        self.server_handle = Some(self.async_runtime.spawn(async move {
             loop {
                 info!("正在开启 WebSocket 服务器到 {addr}");
                 let listener = TcpListener::bind(&addr).await;
@@ -50,7 +56,7 @@ impl AMLLWebSocketServer {
                     Ok(listener) => {
                         info!("已开启 WebSocket 服务器到 {addr}");
                         while let Ok((stream, _)) = listener.accept().await {
-                            async_std::task::spawn(Self::accept_conn(
+                            tokio::spawn(Self::accept_conn(
                                 stream,
                                 app.clone(),
                                 connections.clone(),
@@ -66,7 +72,7 @@ impl AMLLWebSocketServer {
                         }
                     },
                 }
-                async_std::task::sleep(Duration::from_secs(1)).await;
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }));
     }
@@ -87,7 +93,7 @@ impl AMLLWebSocketServer {
         let mut i = 0;
         while i < conns.len() {
             if let Err(err) = conns[i]
-                .send(Message::Binary(ws_protocol::to_body(&data).unwrap()))
+                .send(Message::Binary(ws_protocol::to_body(&data).unwrap().into()))
                 .await
             {
                 warn!("WebSocket 客户端 {:?} 发送失败: {err:?}", conns[i]);
@@ -109,7 +115,7 @@ impl AMLLWebSocketServer {
         let addr_str = addr.to_string();
         info!("已接受套接字连接: {addr}");
 
-        let wss = async_tungstenite::accept_async(stream).await?;
+        let wss = async_tungstenite::tokio::accept_async(stream).await?;
         info!("已连接 WebSocket 客户端: {addr}");
         app.emit("on-ws-protocol-client-connected", &addr_str)?;
         conn_addrs.write().unwrap().insert(addr.to_owned());

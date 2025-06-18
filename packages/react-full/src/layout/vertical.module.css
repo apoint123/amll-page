@@ -59,7 +59,7 @@
 	mix-blend-mode: plus-lighter;
 
 	@media screen and (max-width: 480px) {
-		grid-template-columns: 2em [cover-side] 0fr [info-side] 1fr 2em;
+		grid-template-columns: 20px [cover-side] 0fr [info-side] 1fr 20px;
 	}
 }
 

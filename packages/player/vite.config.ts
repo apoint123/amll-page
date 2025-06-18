@@ -112,7 +112,7 @@ export default defineConfig({
 			},
 		}),
 		wasm(),
-		topLevelAwait(),
+		// topLevelAwait(),
 		svgr({
 			svgrOptions: {
 				ref: true,

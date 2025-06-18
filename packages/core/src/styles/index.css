@@ -11,7 +11,7 @@
 	color: var(--amll-lp-color, white);
 	contain: strict;
 	mix-blend-mode: plus-lighter;
-	font-size: var(--amll-lp-font-size, max(max(4.7vh, 3.2vw), 12px));
+	font-size: var(--amll-lp-font-size, max(max(5vh, 2.5vw), 12px));
 
 	@media screen and (max-width: 768px) {
 		font-size: var(--amll-lp-font-size, max(8vw, 12px));
@@ -47,7 +47,7 @@
 			opacity: 1;
 		}
 
-		> * {
+		>* {
 			content-visibility: auto;
 			contain-intrinsic-size: 100% 2em;
 		}
