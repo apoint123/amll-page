@@ -54,9 +54,7 @@ async fn local_player_main<R: Runtime>(manager: impl Manager<R> + Clone + Send +
 }
 
 pub fn init_local_player<R: Runtime>(emitter: impl Manager<R> + Clone + Send + Sync + 'static) {
-    std::thread::spawn(|| {
-        tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(local_player_main(emitter));
+    tauri::async_runtime::spawn(async move {
+        local_player_main(emitter).await;
     });
 }

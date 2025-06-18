@@ -4,7 +4,7 @@ use serde::*;
 use serde_json::Value;
 use std::net::SocketAddr;
 use std::str::FromStr as _;
-use std::sync::RwLock;
+use tokio::sync::RwLock;
 use symphonia::core::io::{MediaSourceStream, MediaSourceStreamOptions};
 use tauri::ipc::Channel;
 use tauri::{
@@ -25,28 +25,34 @@ pub type AMLLWebSocketServerState<'r> = State<'r, AMLLWebSocketServerWrapper>;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
-fn ws_reopen_connection(
+async fn ws_reopen_connection(
     addr: &str,
-    ws: AMLLWebSocketServerState,
+    ws: State<'_, AMLLWebSocketServerWrapper>,
     channel: Channel<ws_protocol::Body>,
-) {
-    ws.write().unwrap().reopen(addr.to_string(), channel);
+) -> Result<(), String> {
+    ws.write().await.reopen(addr.to_string(), channel);
+    Ok(())
 }
 
 #[tauri::command]
-fn ws_close_connection(ws: AMLLWebSocketServerState) {
-    tauri::async_runtime::block_on(ws.write().unwrap().close());
+async fn ws_close_connection(ws: AMLLWebSocketServerState<'_>) -> Result<(), String> {
+    ws.write().await.close().await;
+    Ok(())
 }
 
 #[tauri::command]
-fn ws_get_connections(ws: AMLLWebSocketServerState) -> Vec<SocketAddr> {
-    ws.read().unwrap().get_connections()
+async fn ws_get_connections(
+    ws: AMLLWebSocketServerState<'_>,
+) -> Result<Vec<SocketAddr>, String> {
+    let server_guard = ws.read().await;
+    let connections = server_guard.get_connections().await;
+    Ok(connections)
 }
 
 #[tauri::command]
-fn ws_boardcast_message(ws: AMLLWebSocketServerState, data: ws_protocol::Body) {
-    let ws = ws.clone();
-    tauri::async_runtime::block_on(ws.write().unwrap().boardcast_message(data));
+async fn ws_boardcast_message(ws: State<'_, AMLLWebSocketServerWrapper>, data: ws_protocol::Body) -> Result<(), String> {
+    ws.write().await.boardcast_message(data).await;
+    Ok(())
 }
 
 #[tauri::command]
