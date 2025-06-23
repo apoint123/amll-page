@@ -179,8 +179,8 @@ class Mesh implements Disposable {
 		b: number,
 	): void {
 		const idx = (vx + vy * this.vertexWidth) * 7 + 2;
-		if (idx >= this.vertexData.length - 1) {
-			console.warn("Vertex position out of range", idx, this.vertexData.length);
+		if (idx >= this.vertexData.length - 2) {
+			console.warn("Vertex color out of range", idx, this.vertexData.length);
 			return;
 		}
 		this.vertexData[idx] = r;
@@ -189,13 +189,30 @@ class Mesh implements Disposable {
 	}
 
 	setVertexUV(vx: number, vy: number, x: number, y: number): void {
-		const idx = (vx + vy * this.vertexWidth) * 7 + 2 + 3;
+		const idx = (vx + vy * this.vertexWidth) * 7 + 5;
 		if (idx >= this.vertexData.length - 1) {
-			console.warn("Vertex position out of range", idx, this.vertexData.length);
+			console.warn("Vertex UV out of range", idx, this.vertexData.length);
 			return;
 		}
 		this.vertexData[idx] = x;
 		this.vertexData[idx + 1] = y;
+	}
+
+	// 批量设置顶点数据的优化方法
+	setVertexData(vx: number, vy: number, x: number, y: number, r: number, g: number, b: number, u: number, v: number): void {
+		const idx = (vx + vy * this.vertexWidth) * 7;
+		if (idx >= this.vertexData.length - 6) {
+			console.warn("Vertex data out of range", idx, this.vertexData.length);
+			return;
+		}
+		const data = this.vertexData;
+		data[idx] = x;
+		data[idx + 1] = y;
+		data[idx + 2] = r;
+		data[idx + 3] = g;
+		data[idx + 4] = b;
+		data[idx + 5] = u;
+		data[idx + 6] = v;
 	}
 
 	getVertexIndexLength(): number {
@@ -613,6 +630,12 @@ class BHPMesh extends Mesh {
 	private uMG = Mat4.create();
 	private uMB = Mat4.create();
 	private tmpV2 = Vec2.create();
+	// 预分配重复使用的矩阵，避免频繁创建
+	private tempX = Mat4.create();
+	private tempY = Mat4.create();
+	private tempR = Mat4.create();
+	private tempG = Mat4.create();
+	private tempB = Mat4.create();
 	/**
 	 * 更新最终呈现的网格数据，此方法应在所有控制点或细分参数的操作完成后调用
 	 */
@@ -620,45 +643,49 @@ class BHPMesh extends Mesh {
 		const subDivM1 = this._subDivisions - 1;
 		const tW = subDivM1 * (this._controlPoints.height - 1);
 		const tH = subDivM1 * (this._controlPoints.width - 1);
-		for (let x = 0; x < this._controlPoints.width - 1; x++) {
-			for (let y = 0; y < this._controlPoints.height - 1; y++) {
+		const controlPointsWidth = this._controlPoints.width;
+		const controlPointsHeight = this._controlPoints.height;
+		const subDivisions = this._subDivisions;
+		
+		// 预计算常用值
+		const invSubDivM1 = 1 / subDivM1;
+		const invTH = 1 / tH;
+		const invTW = 1 / tW;
+		
+		for (let x = 0; x < controlPointsWidth - 1; x++) {
+			for (let y = 0; y < controlPointsHeight - 1; y++) {
 				const p00 = this._controlPoints.get(x, y);
 				const p01 = this._controlPoints.get(x, y + 1);
 				const p10 = this._controlPoints.get(x + 1, y);
 				const p11 = this._controlPoints.get(x + 1, y + 1);
 
-				const X = meshCoefficients(p00, p01, p10, p11, "x", this.uMX);
-				const Y = meshCoefficients(p00, p01, p10, p11, "y", this.uMY);
+				// 复用预分配的矩阵
+				meshCoefficients(p00, p01, p10, p11, "x", this.tempX);
+				meshCoefficients(p00, p01, p10, p11, "y", this.tempY);
+				colorCoefficients(p00, p01, p10, p11, "r", this.tempR);
+				colorCoefficients(p00, p01, p10, p11, "g", this.tempG);
+				colorCoefficients(p00, p01, p10, p11, "b", this.tempB);
 
-				const R = colorCoefficients(p00, p01, p10, p11, "r", this.uMR);
-				const G = colorCoefficients(p00, p01, p10, p11, "g", this.uMG);
-				const B = colorCoefficients(p00, p01, p10, p11, "b", this.uMB);
-
-				const sX = x / (this._controlPoints.width - 1);
-				const sY = y / (this._controlPoints.height - 1);
-				for (let u = 0; u < this._subDivisions; u++) {
-					for (let v = 0; v < this._subDivisions; v++) {
-						// 不知道为啥 x 和 y 要反过来
-						// 总之能跑就行（雾）
-						const vx = y * this._subDivisions + u;
-						const vy = x * this._subDivisions + v;
-						const [px, py] = surfacePoint(
-							u / subDivM1,
-							v / subDivM1,
-							X,
-							Y,
-							this.tmpV2,
-						);
-						this.setVertexPos(vx, vy, px, py);
-						this.setVertexUV(vx, vy, sX + v / tH, 1 - sY - u / tW);
-						const [pr, pg, pb] = colorPoint(
-							u / subDivM1,
-							v / subDivM1,
-							R,
-							G,
-							B,
-						);
-						this.setVertexColor(vx, vy, pr, pg, pb);
+				const sX = x / (controlPointsWidth - 1);
+				const sY = y / (controlPointsHeight - 1);
+				const baseVx = y * subDivisions;
+				const baseVy = x * subDivisions;
+				
+				for (let u = 0; u < subDivisions; u++) {
+					const uNorm = u * invSubDivM1;
+					const vxOffset = baseVx + u;
+					
+					for (let v = 0; v < subDivisions; v++) {
+						const vNorm = v * invSubDivM1;
+						const vy = baseVy + v;
+						
+						const [px, py] = surfacePoint(uNorm, vNorm, this.tempX, this.tempY, this.tmpV2);
+						const [pr, pg, pb] = colorPoint(uNorm, vNorm, this.tempR, this.tempG, this.tempB);
+						const uvX = sX + v * invTH;
+						const uvY = 1 - sY - u * invTW;
+						
+						// 使用批量设置方法减少数组访问次数
+						this.setVertexData(vxOffset, vy, px, py, pr, pg, pb, uvX, uvY);
 					}
 				}
 			}
@@ -738,6 +765,11 @@ export class MeshGradientRenderer extends BaseRenderer {
 	private isNoCover = true;
 	private meshStates: MeshState[] = [];
 	private _disposed = false;
+	// 性能监控
+	private frameCount = 0;
+	private lastFPSUpdate = 0;
+	private currentFPS = 0;
+	private enablePerformanceMonitoring = false;
 
 	setManualControl(enable: boolean) {
 		this.manualControl = enable;
@@ -772,6 +804,9 @@ export class MeshGradientRenderer extends BaseRenderer {
 		this.tickHandle = 0;
 		if (this.paused) return;
 		if (this._disposed) return;
+
+		// 更新性能统计
+		this.updatePerformanceStats(tickTime);
 
 		if (Number.isNaN(this.lastFrameTime)) {
 			this.lastFrameTime = tickTime;
@@ -811,38 +846,42 @@ export class MeshGradientRenderer extends BaseRenderer {
 	private onRedraw(tickTime: number, delta: number) {
 		const latestMeshState = this.meshStates[this.meshStates.length - 1];
 		let canBeStatic = false;
+		
+		// 预计算常用值
+		const deltaFactor = delta / 500;
+		
 		if (latestMeshState) {
 			latestMeshState.mesh.bind();
 			// 考虑到我们并不逐帧更新网格控制点，因此也不需要重复调用 updateMesh
 			if (this.manualControl) latestMeshState.mesh.updateMesh();
+			
 			if (this.isNoCover) {
-				for (const state of this.meshStates) {
-					state.alpha = Math.max(0, state.alpha - delta / 500);
+				// 批量处理alpha更新，减少循环开销
+				let hasActiveStates = false;
+				for (let i = this.meshStates.length - 1; i >= 0; i--) {
+					const state = this.meshStates[i];
+					state.alpha = Math.max(0, state.alpha - deltaFactor);
+					if (state.alpha > 0) {
+						hasActiveStates = true;
+					} else {
+						// 立即释放资源
+						state.mesh.dispose();
+						state.texture.dispose();
+						this.meshStates.splice(i, 1);
+					}
 				}
-				const deleted = this.meshStates.filter((s) => s.alpha === 0);
-				this.meshStates = this.meshStates.filter((s) => s.alpha > 0);
-				for (const state of deleted) {
-					state.mesh.dispose();
-					state.texture.dispose();
-				}
-				if (this.meshStates.length === 0) {
-					canBeStatic = true;
-				}
+				canBeStatic = !hasActiveStates;
 			} else {
-				latestMeshState.alpha = Math.min(
-					1,
-					latestMeshState.alpha + delta / 500,
-				);
+				latestMeshState.alpha = Math.min(1, latestMeshState.alpha + deltaFactor);
 				if (latestMeshState.alpha >= 1) {
+					// 批量清理旧状态
 					const deleted = this.meshStates.splice(0, this.meshStates.length - 1);
 					for (const state of deleted) {
 						state.mesh.dispose();
 						state.texture.dispose();
 					}
 				}
-				if (this.meshStates.length === 1 && latestMeshState.alpha >= 1) {
-					canBeStatic = true;
-				}
+				canBeStatic = this.meshStates.length === 1 && latestMeshState.alpha >= 1;
 			}
 		}
 
@@ -853,6 +892,8 @@ export class MeshGradientRenderer extends BaseRenderer {
 		this.checkIfResize();
 
 		this.mainProgram.use();
+		
+		// 预设置不变的uniform
 		gl.activeTexture(gl.TEXTURE0);
 		this.mainProgram.setUniform1f("u_time", tickTime / 10000);
 		this.mainProgram.setUniform1f(
@@ -860,8 +901,9 @@ export class MeshGradientRenderer extends BaseRenderer {
 			this.manualControl ? 1 : this.canvas.width / this.canvas.height,
 		);
 		this.mainProgram.setUniform1i("u_texture", 0);
-
 		this.mainProgram.setUniform1f("u_volume", this.volume);
+
+		// 渲染所有网格状态
 		for (const state of this.meshStates) {
 			this.mainProgram.setUniform1f("u_alpha", state.alpha);
 			state.texture.bind();
@@ -1066,6 +1108,29 @@ export class MeshGradientRenderer extends BaseRenderer {
 		for (const state of this.meshStates) {
 			state.mesh.dispose();
 			state.texture.dispose();
+		}
+	}
+
+	enablePerformanceMonitor(enable: boolean) {
+		this.enablePerformanceMonitoring = enable;
+		if (enable) {
+			this.frameCount = 0;
+			this.lastFPSUpdate = performance.now();
+		}
+	}
+
+	getCurrentFPS(): number {
+		return this.currentFPS;
+	}
+
+	private updatePerformanceStats(tickTime: number) {
+		if (!this.enablePerformanceMonitoring) return;
+		
+		this.frameCount++;
+		if (tickTime - this.lastFPSUpdate > 1000) {
+			this.currentFPS = this.frameCount;
+			this.frameCount = 0;
+			this.lastFPSUpdate = tickTime;
 		}
 	}
 }

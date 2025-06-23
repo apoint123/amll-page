@@ -34,6 +34,11 @@ fn ws_reopen_connection(
 }
 
 #[tauri::command]
+fn ws_close_connection(ws: AMLLWebSocketServerState) {
+    tauri::async_runtime::block_on(ws.write().unwrap().close());
+}
+
+#[tauri::command]
 fn ws_get_connections(ws: AMLLWebSocketServerState) -> Vec<SocketAddr> {
     ws.read().unwrap().get_connections()
 }
@@ -314,6 +319,7 @@ pub fn run() {
             ws_reopen_connection,
             ws_get_connections,
             ws_boardcast_message,
+            ws_close_connection,
             open_screenshot_window,
             screen_capture::take_screenshot,
             player::local_player_send_msg,

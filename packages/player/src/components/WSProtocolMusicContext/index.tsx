@@ -345,17 +345,17 @@ export const WSProtocolMusicContext: FC = () => {
 		invoke<string[]>("ws_get_connections").then((addrs) =>
 			setConnectedAddrs(new Set(addrs)),
 		);
-		invoke("ws_reopen_connection", {
-			addr: wsProtocolListenAddr,
-			channel: onBodyChannel,
+		invoke("ws_close_connection").then(() => {
+			invoke("ws_reopen_connection", {
+				addr: wsProtocolListenAddr,
+				channel: onBodyChannel,
+			});
 		});
 		return () => {
 			unlistenConnected.then((u) => u());
 			// unlistenBody.then((u) => u());
 			unlistenDisconnected.then((u) => u());
-			invoke("ws_reopen_connection", {
-				addr: "",
-			});
+			invoke("ws_close_connection");
 			if (curCoverBlobUrl) {
 				URL.revokeObjectURL(curCoverBlobUrl);
 				store.set(musicCoverAtom, "");

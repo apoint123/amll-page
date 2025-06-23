@@ -37,6 +37,16 @@ impl AMLLWebSocketServer {
                 .expect("Failed to create Tokio runtime"),
         }
     }
+
+    pub async fn close(&mut self) {
+        if let Some(task) = self.server_handle.take() {
+            task.abort();
+        }
+        self.connections.write().await.clear();
+        self.connection_addrs.write().unwrap().clear();
+        info!("WebSocket 服务器已关闭");
+    }
+
     pub fn reopen(&mut self, addr: String, channel: Channel<ws_protocol::Body>) {
         if let Some(task) = self.server_handle.take() {
             task.abort();
