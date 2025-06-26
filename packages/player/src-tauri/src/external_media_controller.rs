@@ -227,6 +227,7 @@ fn event_bridge_main_loop<R: Runtime>(
     let mut last_known_info: Option<SmtcNowPlayingInfo> = None;
     let mut last_sent_metadata_hash: u64 = 0;
     let mut last_sent_cover_hash: u64 = 0;
+    let mut last_polled_is_playing: Option<bool> = None;
 
     loop {
         if let Ok(command) = command_rx.try_recv() {
@@ -241,6 +242,11 @@ fn event_bridge_main_loop<R: Runtime>(
                             duration_ms: info.duration_ms,
                         };
                         let _ = app_handle.emit("smtc_update", payload);
+
+                        if let Some(cover_data) = info.cover_data.clone() {
+                            let payload = SmtcPartialUpdatePayload::CoverData(Some(cover_data));
+                            let _ = app_handle.emit("smtc_update", payload);
+                        }
 
                         let payload = SmtcPartialUpdatePayload::CoverData(info.cover_data.clone());
                         let _ = app_handle.emit("smtc_update", payload);
@@ -262,6 +268,7 @@ fn event_bridge_main_loop<R: Runtime>(
             Ok(update) => match update {
                 MediaUpdate::TrackChanged(info) => {
                     let info = parse_apple_music_field(info);
+                    last_polled_is_playing = None;
 
                     let metadata_hash =
                         fxhash::hash64(&(info.title.as_deref(), info.artist.as_deref()));
@@ -290,6 +297,7 @@ fn event_bridge_main_loop<R: Runtime>(
                 }
 
                 MediaUpdate::SessionsChanged(sessions) => {
+                    last_polled_is_playing = None;
                     debug!("SMTC SessionsChanged: {} 个会话", sessions.len());
                     let payload = SmtcPartialUpdatePayload::SessionsChanged(
                         sessions.into_iter().map(SmtcSessionInfo::from).collect(),
@@ -297,6 +305,7 @@ fn event_bridge_main_loop<R: Runtime>(
                     let _ = app_handle.emit("smtc_update", payload);
                 }
                 MediaUpdate::SelectedSessionVanished(id) => {
+                    last_polled_is_playing = None;
                     warn!("SMTC 选择的会话已消失: {}", id);
                     let payload = SmtcPartialUpdatePayload::SelectedSessionVanished(id);
                     let _ = app_handle.emit("smtc_update", payload);
@@ -310,15 +319,19 @@ fn event_bridge_main_loop<R: Runtime>(
                 _ => {}
             },
             Err(RecvTimeoutError::Timeout) => {
-                if let Some(info) = &last_known_info
-                    && info.is_playing.unwrap_or(false)
-                {
-                    let estimated_pos = get_estimated_pos(info).unwrap_or(0);
-                    let payload = SmtcPartialUpdatePayload::PlaybackStatus {
-                        is_playing: true,
-                        position_ms: estimated_pos,
-                    };
-                    let _ = app_handle.emit("smtc_update", payload);
+                if let Some(info) = &last_known_info {
+                    let current_is_playing = info.is_playing.unwrap_or(false);
+
+                    if last_polled_is_playing != Some(current_is_playing) || current_is_playing {
+                        let estimated_pos = get_estimated_pos(info).unwrap_or(0);
+                        let payload = SmtcPartialUpdatePayload::PlaybackStatus {
+                            is_playing: current_is_playing,
+                            position_ms: estimated_pos,
+                        };
+                        let _ = app_handle.emit("smtc_update", payload);
+                        
+                        last_polled_is_playing = Some(current_is_playing);
+                    }
                 }
             }
             Err(RecvTimeoutError::Disconnected) => {
