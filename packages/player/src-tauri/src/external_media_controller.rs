@@ -58,6 +58,8 @@ pub struct TrackMetadata {
 pub struct PlaybackStatus {
     pub is_playing: bool,
     pub position_ms: u64,
+    pub is_shuffle_active: bool,
+    pub repeat_mode: RepeatMode,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
@@ -81,11 +83,21 @@ impl From<SmtcSesssionInfo> for SmtcSessionInfo {
 pub enum MediaCommand {
     SelectSession { session_id: String },
     SetTextConversion { mode: TextConversionMode },
+    SetShuffle { is_active: bool },
+    SetRepeatMode { mode: RepeatMode },
     Play,
     Pause,
     SkipNext,
     SkipPrevious,
     SeekTo { time_ms: u64 },
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum RepeatMode {
+    Off,
+    One,
+    All,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -172,6 +184,19 @@ pub async fn control_external_media(
                 }
             };
             smtc_suite::MediaCommand::SetTextConversion(suite_mode)
+        }
+        MediaCommand::SetShuffle { is_active } => {
+            smtc_suite::MediaCommand::Control(smtc_suite::SmtcControlCommand::SetShuffle(is_active))
+        }
+        MediaCommand::SetRepeatMode { mode } => {
+            let suite_mode = match mode {
+                RepeatMode::Off => smtc_suite::RepeatMode::Off,
+                RepeatMode::One => smtc_suite::RepeatMode::One,
+                RepeatMode::All => smtc_suite::RepeatMode::All,
+            };
+            smtc_suite::MediaCommand::Control(smtc_suite::SmtcControlCommand::SetRepeatMode(
+                suite_mode,
+            ))
         }
         MediaCommand::Play => {
             smtc_suite::MediaCommand::Control(smtc_suite::SmtcControlCommand::Play)
@@ -273,7 +298,6 @@ fn event_bridge_main_loop<R: Runtime>(
 ) {
     let mut last_known_info: Option<SmtcNowPlayingInfo> = None;
     let mut last_sent_cover_hash: u64 = 0;
-    let mut last_polled_is_playing: Option<bool> = None;
 
     loop {
         if let Ok(command) = command_rx.try_recv() {
@@ -296,6 +320,15 @@ fn event_bridge_main_loop<R: Runtime>(
                         let playback_payload = SmtcEvent::PlaybackStatus(PlaybackStatus {
                             is_playing: info.is_playing.unwrap_or(false),
                             position_ms: estimated_pos,
+                            is_shuffle_active: info.is_shuffle_active.unwrap_or(false),
+                            repeat_mode: info
+                                .repeat_mode
+                                .map(|m| match m {
+                                    smtc_suite::RepeatMode::Off => RepeatMode::Off,
+                                    smtc_suite::RepeatMode::One => RepeatMode::One,
+                                    smtc_suite::RepeatMode::All => RepeatMode::All,
+                                })
+                                .unwrap_or(RepeatMode::Off),
                         });
                         let _ = app_handle.emit("smtc_update", playback_payload);
 
@@ -317,31 +350,48 @@ fn event_bridge_main_loop<R: Runtime>(
             Ok(update) => match update {
                 MediaUpdate::TrackChanged(info) => {
                     let info = parse_apple_music_field(info);
-                    last_polled_is_playing = None;
 
+                    // 发送元数据
+                    let _ = app_handle.emit(
+                        "smtc_update",
+                        SmtcEvent::TrackMetadata(TrackMetadata {
+                            title: info.title.clone(),
+                            artist: info.artist.clone(),
+                            album_title: info.album_title.clone(),
+                            duration_ms: info.duration_ms,
+                        }),
+                    );
+
+                    // 检查并发送封面
                     let cover_hash = info.cover_data_hash.unwrap_or(0);
-
-                    debug!("元数据发生变化，发送 TrackMetadata 更新。");
-                    let payload = SmtcEvent::TrackMetadata(TrackMetadata {
-                        title: info.title.clone(),
-                        artist: info.artist.clone(),
-                        album_title: info.album_title.clone(),
-                        duration_ms: info.duration_ms,
-                    });
-                    let _ = app_handle.emit("smtc_update", payload);
-
                     if cover_hash != last_sent_cover_hash {
-                        debug!("封面发生变化，发送 CoverData 更新。");
-                        let payload = SmtcEvent::CoverData(info.cover_data.clone());
-                        let _ = app_handle.emit("smtc_update", payload);
+                        let _ = app_handle
+                            .emit("smtc_update", SmtcEvent::CoverData(info.cover_data.clone()));
                         last_sent_cover_hash = cover_hash;
                     }
+
+                    // 在曲目变更后，立即发送一次完整的播放状态
+                    let _ = app_handle.emit(
+                        "smtc_update",
+                        SmtcEvent::PlaybackStatus(PlaybackStatus {
+                            is_playing: info.is_playing.unwrap_or(false),
+                            position_ms: get_estimated_pos(&info).unwrap_or(0),
+                            is_shuffle_active: info.is_shuffle_active.unwrap_or(false),
+                            repeat_mode: info
+                                .repeat_mode
+                                .map(|m| match m {
+                                    smtc_suite::RepeatMode::Off => RepeatMode::Off,
+                                    smtc_suite::RepeatMode::One => RepeatMode::One,
+                                    smtc_suite::RepeatMode::All => RepeatMode::All,
+                                })
+                                .unwrap_or(RepeatMode::Off),
+                        }),
+                    );
 
                     last_known_info = Some(info);
                 }
 
                 MediaUpdate::SessionsChanged(sessions) => {
-                    last_polled_is_playing = None;
                     debug!("SMTC SessionsChanged: {} 个会话", sessions.len());
                     let payload = SmtcEvent::SessionsChanged(
                         sessions.into_iter().map(SmtcSessionInfo::from).collect(),
@@ -349,7 +399,6 @@ fn event_bridge_main_loop<R: Runtime>(
                     let _ = app_handle.emit("smtc_update", payload);
                 }
                 MediaUpdate::SelectedSessionVanished(id) => {
-                    last_polled_is_playing = None;
                     warn!("SMTC 选择的会话已消失: {}", id);
                     let payload = SmtcEvent::SelectedSessionVanished(id);
                     let _ = app_handle.emit("smtc_update", payload);
@@ -363,19 +412,24 @@ fn event_bridge_main_loop<R: Runtime>(
                 _ => {}
             },
             Err(RecvTimeoutError::Timeout) => {
+                // 在轮询时，也发送完整的播放状态
                 if let Some(info) = &last_known_info {
-                    let current_is_playing = info.is_playing.unwrap_or(false);
-
-                    if last_polled_is_playing != Some(current_is_playing) || current_is_playing {
-                        let estimated_pos = get_estimated_pos(info).unwrap_or(0);
-                        let payload = SmtcEvent::PlaybackStatus(PlaybackStatus {
-                            is_playing: current_is_playing,
-                            position_ms: estimated_pos,
-                        });
-                        let _ = app_handle.emit("smtc_update", payload);
-
-                        last_polled_is_playing = Some(current_is_playing);
-                    }
+                    let _ = app_handle.emit(
+                        "smtc_update",
+                        SmtcEvent::PlaybackStatus(PlaybackStatus {
+                            is_playing: info.is_playing.unwrap_or(false),
+                            position_ms: get_estimated_pos(info).unwrap_or(0),
+                            is_shuffle_active: info.is_shuffle_active.unwrap_or(false),
+                            repeat_mode: info
+                                .repeat_mode
+                                .map(|m| match m {
+                                    smtc_suite::RepeatMode::Off => RepeatMode::Off,
+                                    smtc_suite::RepeatMode::One => RepeatMode::One,
+                                    smtc_suite::RepeatMode::All => RepeatMode::All,
+                                })
+                                .unwrap_or(RepeatMode::Off),
+                        }),
+                    );
                 }
             }
             Err(RecvTimeoutError::Disconnected) => {

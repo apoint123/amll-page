@@ -9,7 +9,7 @@ import {
 	type LyricPlayerRef,
 } from "@applemusic-like-lyrics/react";
 import structuredClone from "@ungap/structured-clone";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
 	type FC,
 	type HTMLProps,
@@ -94,6 +94,21 @@ import IconForward from "./icon_forward.svg?react";
 import IconPause from "./icon_pause.svg?react";
 import IconPlay from "./icon_play.svg?react";
 import IconRewind from "./icon_rewind.svg?react";
+import RepeatIcon from './repeat.svg?react';
+import RepeatActiveIcon from './repeat-active.svg?react';
+import RepeatOneActiveIcon from './repeat-one-active.svg?react';
+import ShuffleIcon from './shuffle.svg?react';
+import ShuffleActiveIcon from './shuffle-active.svg?react';
+
+import {
+	MusicContextMode,
+	musicContextModeAtom,
+	onClickSmtcRepeatAtom,
+	onClickSmtcShuffleAtom,
+	RepeatMode,
+	smtcRepeatModeAtom,
+	smtcShuffleStateAtom,
+} from "../../../../player/src/states";
 
 const PrebuiltMusicInfo: FC<{
 	className?: string;
@@ -125,10 +140,41 @@ const PrebuiltMediaButtons: FC<{
 	const onRequestPrevSong = useAtomValue(onRequestPrevSongAtom).onEmit;
 	const onRequestNextSong = useAtomValue(onRequestNextSongAtom).onEmit;
 	const onPlayOrResume = useAtomValue(onPlayOrResumeAtom).onEmit;
+	
+	const musicContextMode = useAtomValue(musicContextModeAtom);
+	const isShuffleOn = useAtomValue(smtcShuffleStateAtom);
+	const repeatMode = useAtomValue(smtcRepeatModeAtom);
+
+	const toggleShuffle = useSetAtom(onClickSmtcShuffleAtom);
+	const cycleRepeat = useSetAtom(onClickSmtcRepeatAtom);
+
+    const iconStyle = {
+        width: '1.3em',
+        height: '1.3em',
+    };
+
+	const renderRepeatIcon = () => {
+		switch (repeatMode) {
+			case RepeatMode.One:
+				return <RepeatOneActiveIcon color="#ffffffff" style={iconStyle} />;
+			case RepeatMode.All:
+				return <RepeatActiveIcon color="#ffffffff" style={iconStyle} />;
+			case RepeatMode.Off:
+			default:
+				return <RepeatIcon color="#ffffffff" style={iconStyle} />;
+		}
+	};
+
 	return (
 		<>
 			{showOtherButtons && (
-				<PrebuiltToggleIconButton type={PrebuiltToggleIconButtonType.Shuffle} />
+				<MediaButton
+					className={styles.songMediaButton}
+					onClick={toggleShuffle}
+					disabled={musicContextMode !== MusicContextMode.SystemListener}
+				>
+					{isShuffleOn ? <ShuffleActiveIcon color="#ffffffff" style={iconStyle}/> : <ShuffleIcon color="#ffffffff" style={iconStyle}/>}
+				</MediaButton>
 			)}
 			<MediaButton
 				className={styles.songMediaButton}
@@ -152,8 +198,15 @@ const PrebuiltMediaButtons: FC<{
 			>
 				<IconForward color="#FFFFFF" />
 			</MediaButton>
+			
 			{showOtherButtons && (
-				<PrebuiltToggleIconButton type={PrebuiltToggleIconButtonType.Repeat} />
+				<MediaButton
+					className={styles.songMediaButton}
+					onClick={cycleRepeat}
+					disabled={musicContextMode !== MusicContextMode.SystemListener}
+				>
+					{renderRepeatIcon()}
+				</MediaButton>
 			)}
 		</>
 	);

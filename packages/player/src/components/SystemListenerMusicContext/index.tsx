@@ -1,3 +1,5 @@
+import { type FC, useEffect } from "react";
+
 import {
 	musicAlbumNameAtom,
 	musicArtistsAtom,
@@ -21,28 +23,27 @@ import {
 } from "@applemusic-like-lyrics/react-full";
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from "@tauri-apps/api/event";
-import { useSetAtom, useStore } from "jotai";
-import { type FC, useEffect } from "react";
+import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
-import { musicIdAtom, smtcSessionsAtom, smtcTrackIdAtom } from "../../states";
+
+import {
+	musicIdAtom,
+	RepeatMode,
+	smtcRepeatModeAtom,
+	smtcSessionsAtom,
+	smtcShuffleStateAtom,
+	smtcTextConversionModeAtom,
+	smtcTrackIdAtom,
+} from "../../states";
 
 type SmtcEvent =
 	| { type: "trackMetadata"; data: { title: string | null; artist: string | null; albumTitle: string | null; durationMs: number | null; } }
 	| { type: "coverData"; data: number[] | null }
-	| { type: "playbackStatus"; data: { isPlaying: boolean; positionMs: number } }
+	| { type: "playbackStatus"; data: { isPlaying: boolean; positionMs: number; isShuffleActive: boolean; repeatMode: RepeatMode; } }
 	| { type: "sessionsChanged"; data: { sessionId: string; displayName: string }[] }
 	| { type: "selectedSessionVanished"; data: string }
-	| { type: "error"; data: string };
-
-type MediaCommand =
-	| { type: 'selectSession'; payload: { session_id: string } }
-	| { type: 'play' }
-	| { type: 'pause' }
-	| { type: 'skipNext' }
-	| { type: 'skipPrevious' }
-	| { type: 'seekTo'; payload: { time_ms: number } };
-
+	| { type: "error"; data: string }
 
 export const SystemListenerMusicContext: FC = () => {
 	const store = useStore();
@@ -50,25 +51,38 @@ export const SystemListenerMusicContext: FC = () => {
 	const setMusicId = useSetAtom(musicIdAtom);
 	const setSmtcTrackId = useSetAtom(smtcTrackIdAtom);
 	const setSmtcSessions = useSetAtom(smtcSessionsAtom);
+	const setSmtcShuffle = useSetAtom(smtcShuffleStateAtom);
+	const setSmtcRepeat = useSetAtom(smtcRepeatModeAtom);
+	const textConversionMode = useAtomValue(smtcTextConversionModeAtom);
+
+	useEffect(() => {
+		invoke("control_external_media", {
+			payload: {
+				type: "setTextConversion",
+				mode: textConversionMode,
+			},
+		}).catch(console.error);
+	}, [textConversionMode]);
 
 	useEffect(() => {
 		console.log(
-			"[SystemListenerMusicContext] 组件已挂载。正在请求初始状态更新...",
+			"[SystemListenerMusicContext] 组件已挂载。",
 		);
-		invoke("request_smtc_update").catch((err) => {
-			console.error("请求初始 SMTC 状态失败：", err);
-		});
 
-		const toEmit = <T,>(onEmit: T) => ({
-			onEmit,
-		});
+		const initialUpdateTimeout = setTimeout(() => {
+			console.log("[SystemListenerMusicContext] 正在请求初始状态更新...");
+			invoke("request_smtc_update").catch((err) => {
+				console.error("请求初始 SMTC 状态失败：", err);
+			});
+		}, 100);
+
+		const toEmit = <T,>(onEmit: T) => ({ onEmit });
 
 		store.set(
 			onPlayOrResumeAtom,
 			toEmit(() => {
 				const isPlaying = store.get(musicPlayingAtom);
-				const command: MediaCommand = isPlaying ? { type: "pause" } : { type: "play" };
-				invoke("control_external_media", { payload: command });
+				invoke("control_external_media", { payload: { type: isPlaying ? "pause" : "play" } });
 			}),
 		);
 		store.set(
@@ -167,6 +181,8 @@ export const SystemListenerMusicContext: FC = () => {
 					case "playbackStatus": {
 						store.set(musicPlayingAtom, data.isPlaying);
 						store.set(musicPlayingPositionAtom, data.positionMs);
+						setSmtcShuffle(data.isShuffleActive);
+						setSmtcRepeat(data.repeatMode);
 						break;
 					}
 
@@ -196,6 +212,7 @@ export const SystemListenerMusicContext: FC = () => {
 		);
 
 		return () => {
+			clearTimeout(initialUpdateTimeout);
 			unlistenPromise.then((unlisten) => unlisten());
 
 			store.set(onPlayOrResumeAtom, toEmit(() => { }));
@@ -219,8 +236,10 @@ export const SystemListenerMusicContext: FC = () => {
 			store.set(musicLyricLinesAtom, []);
 			setSmtcTrackId("");
 			setMusicId("");
+			setSmtcShuffle(false);
+			setSmtcRepeat(RepeatMode.Off);
 		};
-	}, [store, t, setMusicId, setSmtcTrackId, setSmtcSessions]);
+	}, [store, t, setMusicId, setSmtcTrackId, setSmtcSessions, setSmtcShuffle, setSmtcRepeat]);
 
 	return null;
 };
