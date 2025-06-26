@@ -1,6 +1,7 @@
 import {
 	ArrowLeftIcon,
 	Component1Icon,
+	DesktopIcon,
 	GearIcon,
 	InfoCircledIcon,
 	MagicWandIcon,
@@ -16,8 +17,9 @@ import {
 	Text,
 	Tooltip,
 } from "@radix-ui/themes";
+import { platform } from "@tauri-apps/plugin-os";
 import { atom, useAtom, useAtomValue } from "jotai";
-import { Suspense, type FC, type ReactNode } from "react";
+import { Suspense, type FC, type ReactNode, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { loadedExtensionAtom } from "../../states/extension.ts";
 import { ExtensionTab } from "./extension.tsx";
@@ -31,6 +33,16 @@ const loadedExtensionsWithSettingsAtom = atom((get) => {
 		(v) => v.context.registeredInjectPointComponent.settings,
 	);
 });
+
+const usePlatform = () => {
+	const [os, setOs] = useState<string | null>(null);
+
+	useEffect(() => {
+		setOs(platform());
+	}, []);
+
+	return os;
+};
 
 const SidebarButton: FC<{
 	icon: ReactNode;
@@ -57,19 +69,33 @@ const SidebarButton: FC<{
 
 
 export const Component: FC = () => {
+	const os = usePlatform();
 	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
 	const loadedExtensions = useAtomValue(loadedExtensionsWithSettingsAtom);
 	const { t } = useTranslation();
 
-	const playerSettingsPages = [
-		{ id: "general", label: t("page.settings.general.subtitle"), icon: <GearIcon width={20} height={20} /> },
-		{ id: "lyricContent", label: t("page.settings.lyricContent.subtitle"), icon: <TextAlignJustifyIcon width={20} height={20} /> },
-		{ id: "lyricAppearance", label: t("page.settings.lyricAppearance.subtitle"), icon: <MagicWandIcon width={20} height={20} /> },
-		{ id: "musicInfoAppearance", label: t("page.settings.musicInfoAppearance.subtitle"), icon: <InfoCircledIcon width={20} height={20} /> },
-		{ id: "lyricBackground", label: t("page.settings.lyricBackground.subtitle"), icon: <MixerHorizontalIcon width={20} height={20} /> },
-		{ id: "others", label: t("page.settings.others.subtitle"), icon: <Component1Icon width={20} height={20} /> },
-		{ id: "about", label: t("page.about.subtitle"), icon: <QuestionMarkCircledIcon width={20} height={20} /> },
-	];
+	const playerSettingsPages = useMemo(() => {
+		const pages = [
+			{ id: "general", label: t("page.settings.general.subtitle"), icon: <GearIcon width={20} height={20} /> },
+			{ id: "lyricContent", label: t("page.settings.lyricContent.subtitle"), icon: <TextAlignJustifyIcon width={20} height={20} /> },
+			{ id: "lyricAppearance", label: t("page.settings.lyricAppearance.subtitle"), icon: <MagicWandIcon width={20} height={20} /> },
+			{ id: "musicInfoAppearance", label: t("page.settings.musicInfoAppearance.subtitle"), icon: <InfoCircledIcon width={20} height={20} /> },
+			{ id: "lyricBackground", label: t("page.settings.lyricBackground.subtitle"), icon: <MixerHorizontalIcon width={20} height={20} /> },
+			{ id: "others", label: t("page.settings.others.subtitle"), icon: <Component1Icon width={20} height={20} /> },
+		];
+
+		if (os === 'windows') {
+			pages.push({
+				id: 'smtc',
+				label: t("page.settings.smtc.subtitle", "SMTC 监听设置"),
+				icon: <DesktopIcon width={20} height={20} />
+			});
+		}
+
+		pages.push({ id: "about", label: t("page.about.subtitle"), icon: <QuestionMarkCircledIcon width={20} height={20} /> });
+
+		return pages;
+	}, [os, t]);
 
 	const renderContent = () => {
 		if (currentPage.startsWith("player.")) {

@@ -25,29 +25,31 @@ import { useSetAtom, useStore } from "jotai";
 import { type FC, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
-import { musicIdAtom, smtcTrackIdAtom } from "../../states";
+import { musicIdAtom, smtcSessionsAtom, smtcTrackIdAtom } from "../../states";
 
-type SmtcPartialUpdatePayload =
-	| {
-		type: "TrackMetadata";
-		data: {
-			title: string | null;
-			artist: string | null;
-			albumTitle: string | null;
-			durationMs: number | null;
-		};
-	}
-	| { type: "CoverData"; data: number[] | null }
-	| { type: "PlaybackStatus"; data: { isPlaying: boolean; positionMs: number } }
-	| { type: "SessionsChanged"; data: { sessionId: string; displayName: string }[] }
-	| { type: "SelectedSessionVanished"; data: string }
-	| { type: "Error"; data: string };
+type SmtcEvent =
+	| { type: "trackMetadata"; data: { title: string | null; artist: string | null; albumTitle: string | null; durationMs: number | null; } }
+	| { type: "coverData"; data: number[] | null }
+	| { type: "playbackStatus"; data: { isPlaying: boolean; positionMs: number } }
+	| { type: "sessionsChanged"; data: { sessionId: string; displayName: string }[] }
+	| { type: "selectedSessionVanished"; data: string }
+	| { type: "error"; data: string };
+
+type MediaCommand =
+	| { type: 'selectSession'; payload: { session_id: string } }
+	| { type: 'play' }
+	| { type: 'pause' }
+	| { type: 'skipNext' }
+	| { type: 'skipPrevious' }
+	| { type: 'seekTo'; payload: { time_ms: number } };
+
 
 export const SystemListenerMusicContext: FC = () => {
 	const store = useStore();
 	const { t } = useTranslation();
 	const setMusicId = useSetAtom(musicIdAtom);
 	const setSmtcTrackId = useSetAtom(smtcTrackIdAtom);
+	const setSmtcSessions = useSetAtom(smtcSessionsAtom);
 
 	useEffect(() => {
 		console.log(
@@ -65,25 +67,20 @@ export const SystemListenerMusicContext: FC = () => {
 			onPlayOrResumeAtom,
 			toEmit(() => {
 				const isPlaying = store.get(musicPlayingAtom);
-				invoke("control_external_media", {
-					payload: isPlaying ? { command: "Pause" } : { command: "Play" },
-				});
+				const command: MediaCommand = isPlaying ? { type: "pause" } : { type: "play" };
+				invoke("control_external_media", { payload: command });
 			}),
 		);
 		store.set(
 			onRequestNextSongAtom,
 			toEmit(() => {
-				invoke("control_external_media", {
-					payload: { command: "SkipNext" },
-				});
+				invoke("control_external_media", { payload: { type: "skipNext" } });
 			}),
 		);
 		store.set(
 			onRequestPrevSongAtom,
 			toEmit(() => {
-				invoke("control_external_media", {
-					payload: { command: "SkipPrevious" },
-				});
+				invoke("control_external_media", { payload: { type: "skipPrevious" } });
 			}),
 		);
 		store.set(
@@ -91,7 +88,7 @@ export const SystemListenerMusicContext: FC = () => {
 			toEmit((time: number) => {
 				invoke("control_external_media", {
 					payload: {
-						command: "SeekTo",
+						type: "seekTo",
 						payload: { time_ms: time },
 					},
 				});
@@ -103,12 +100,13 @@ export const SystemListenerMusicContext: FC = () => {
 				const time = evt.line.getLine().startTime;
 				invoke("control_external_media", {
 					payload: {
-						command: "SeekTo",
+						type: "seekTo",
 						payload: { time_ms: time },
 					},
 				});
 			}),
 		);
+
 		store.set(
 			onChangeVolumeAtom,
 			toEmit(() => {
@@ -120,14 +118,13 @@ export const SystemListenerMusicContext: FC = () => {
 		store.set(onClickLeftFunctionButtonAtom, toEmit(() => { }));
 		store.set(onClickRightFunctionButtonAtom, toEmit(() => { }));
 
-
-		const unlistenPromise = listen<SmtcPartialUpdatePayload>(
+		const unlistenPromise = listen<SmtcEvent>(
 			"smtc_update",
 			(event) => {
 				const { type, data } = event.payload;
 
 				switch (type) {
-					case "TrackMetadata": {
+					case "trackMetadata": {
 						const newTrackId = `${data.title}-${data.artist}-${data.albumTitle}`;
 						const oldTrackId = store.get(smtcTrackIdAtom);
 
@@ -135,11 +132,8 @@ export const SystemListenerMusicContext: FC = () => {
 
 						if (newTrackId !== oldTrackId) {
 							setSmtcTrackId(newTrackId);
-
 							setMusicId(newTrackId);
-
 							store.set(musicPlayingPositionAtom, 0);
-
 							store.set(musicLyricLinesAtom, []);
 						}
 
@@ -155,7 +149,7 @@ export const SystemListenerMusicContext: FC = () => {
 						break;
 					}
 
-					case "CoverData":
+					case "coverData":
 						if (data && data.length > 0) {
 							const imgBlob = new Blob([new Uint8Array(data)], { type: "image/png" });
 							const newUrl = URL.createObjectURL(imgBlob);
@@ -170,35 +164,38 @@ export const SystemListenerMusicContext: FC = () => {
 						}
 						break;
 
-					case "PlaybackStatus": {
-
+					case "playbackStatus": {
 						store.set(musicPlayingAtom, data.isPlaying);
-
 						store.set(musicPlayingPositionAtom, data.positionMs);
-
 						break;
 					}
 
-					case "SessionsChanged":
+					case "sessionsChanged": {
+						console.log(`[SystemListener] 收到会话列表更新:`, data);
+						setSmtcSessions(data);
 						break;
+					}
 
-					case "SelectedSessionVanished":
-						toast.warn(t("amll.systemListener.sessionVanished", "被监听的应用似乎已关闭"));
+					case "selectedSessionVanished":
+						toast.warn(t("amll.systemListener.sessionVanished", "监听的 SMTC 会话已消失"));
 						store.set(musicPlayingAtom, false);
+						setSmtcSessions([]);
 						break;
 
-					case "Error":
+
+					case "error":
 						console.error(`[SystemListener] 错误：${data}`);
 						toast.error(t("amll.systemListener.error", "系统监听发生错误: {error}", { error: data }));
 						break;
+
 					default:
-						console.warn(`[SystemListener] 收到未处理的事件类型：${type}`);
+						const unhandled: never = type;
+						console.warn(`[SystemListener] 收到未处理的事件类型：'${unhandled}'`);
 				}
 			},
 		);
 
 		return () => {
-			console.log("[SystemListenerMusicContext] 组件即将卸载。正在清理监听器和回调函数。");
 			unlistenPromise.then((unlisten) => unlisten());
 
 			store.set(onPlayOrResumeAtom, toEmit(() => { }));
@@ -223,7 +220,7 @@ export const SystemListenerMusicContext: FC = () => {
 			setSmtcTrackId("");
 			setMusicId("");
 		};
-	}, [store, t, setMusicId, setSmtcTrackId]);
+	}, [store, t, setMusicId, setSmtcTrackId, setSmtcSessions]);
 
 	return null;
 };

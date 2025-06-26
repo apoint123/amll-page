@@ -110,6 +110,21 @@ export const musicContextModeAtom = atomWithStorage(
 	MusicContextMode.Local,
 );
 
+export enum TextConversionMode {
+	Off = "off",
+	TraditionalToSimplified = "traditionalToSimplified",
+	SimplifiedToTraditional = "simplifiedToTraditional",
+	SimplifiedToTaiwan = "simplifiedToTaiwan",
+	TaiwanToSimplified = "taiwanToSimplified",
+	SimplifiedToHongKong = "simplifiedToHongKong",
+	HongKongToSimplified = "hongKongToSimplified",
+}
+
+export const smtcTextConversionModeAtom = atomWithStorage(
+	"amll-player.smtcTextConversionMode",
+	TextConversionMode.Off,
+);
+
 export interface SmtcSession {
 	sessionId: string;
 	displayName: string;
@@ -117,4 +132,4 @@ export interface SmtcSession {
 export const smtcSessionsAtom = atom<SmtcSession[]>([]);
 export const smtcSelectedSessionIdAtom = atom<string | null>(null);
 export const audioQualityDialogOpenedAtom = atom(false);
-export const smtcTrackIdAtom = atom<string>(""); 
+export const smtcTrackIdAtom = atom<string>("");
