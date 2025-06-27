@@ -1,26 +1,5 @@
 import { type FC, useEffect } from "react";
 
-import {
-	musicAlbumNameAtom,
-	musicArtistsAtom,
-	musicCoverAtom,
-	musicCoverIsVideoAtom,
-	musicDurationAtom,
-	musicLyricLinesAtom,
-	musicNameAtom,
-	musicPlayingAtom,
-	musicPlayingPositionAtom,
-	onChangeVolumeAtom,
-	onClickControlThumbAtom,
-	onClickLeftFunctionButtonAtom,
-	onClickRightFunctionButtonAtom,
-	onLyricLineClickAtom,
-	onPlayOrResumeAtom,
-	onRequestNextSongAtom,
-	onRequestOpenMenuAtom,
-	onRequestPrevSongAtom,
-	onSeekPositionAtom,
-} from "@applemusic-like-lyrics/react-full";
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from "@tauri-apps/api/event";
 import { useAtomValue, useSetAtom, useStore } from "jotai";
@@ -28,14 +7,33 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 
 import {
-	musicIdAtom,
-	RepeatMode,
-	smtcRepeatModeAtom,
-	smtcSessionsAtom,
-	smtcShuffleStateAtom,
-	smtcTextConversionModeAtom,
-	smtcTrackIdAtom,
-} from "../../states";
+    musicAlbumNameAtom,
+    musicArtistsAtom,
+    musicCoverAtom,
+    musicCoverIsVideoAtom,
+    musicDurationAtom,
+    musicIdAtom,
+    musicLyricLinesAtom,
+    musicNameAtom,
+    musicPlayingAtom,
+    musicPlayingPositionAtom,
+    onChangeVolumeAtom,
+    onClickControlThumbAtom,
+    onClickLeftFunctionButtonAtom,
+    onClickRightFunctionButtonAtom,
+    onLyricLineClickAtom,
+    onPlayOrResumeAtom,
+    onRequestNextSongAtom,
+    onRequestOpenMenuAtom,
+    onRequestPrevSongAtom,
+    onSeekPositionAtom,
+    RepeatMode,
+    smtcRepeatModeAtom,
+    smtcSessionsAtom,
+    smtcShuffleStateAtom,
+    smtcTextConversionModeAtom,
+    smtcTrackIdAtom,
+} from "@applemusic-like-lyrics/states";
 
 type SmtcEvent =
 	| { type: "trackMetadata"; data: { title: string | null; artist: string | null; albumTitle: string | null; durationMs: number | null; } }

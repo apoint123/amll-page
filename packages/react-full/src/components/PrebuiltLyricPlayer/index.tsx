@@ -3,22 +3,13 @@
  * 已经部署好所有组件的歌词播放器组件，在正确设置所有的 Jotai 状态后可以开箱即用
  */
 
-import {
-	BackgroundRender,
-	LyricPlayer,
-	type LyricPlayerRef,
-} from "@applemusic-like-lyrics/react";
-import structuredClone from "@ungap/structured-clone";
+import { BackgroundRender, LyricPlayer, type LyricPlayerRef } from "@applemusic-like-lyrics/react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import {
-	type FC,
-	type HTMLProps,
-	useLayoutEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
-import { AutoLyricLayout } from "../../layout/auto";
+import classNames from "classnames";
+import { AnimatePresence, LayoutGroup } from "framer-motion";
+import structuredClone from "@ungap/structured-clone";
+import { type FC, type HTMLProps, useLayoutEffect, useMemo, useRef, useState } from "react";
+
 import {
 	onChangeVolumeAtom,
 	onClickAudioQualityTagAtom,
@@ -30,8 +21,6 @@ import {
 	onRequestOpenMenuAtom,
 	onRequestPrevSongAtom,
 	onSeekPositionAtom,
-} from "../../states/callback";
-import {
 	fftDataAtom,
 	hideLyricViewAtom,
 	isLyricPageOpenedAtom,
@@ -47,22 +36,11 @@ import {
 	musicPlayingPositionAtom,
 	musicQualityTagAtom,
 	musicVolumeAtom,
-} from "../../states/music";
-import { BouncingSlider } from "../BouncingSlider";
-import { ControlThumb } from "../ControlThumb";
-import { Cover } from "../Cover";
-import { MusicInfo } from "../MusicInfo";
-import { VolumeControl } from "../VolumeControlSlider";
-import "./icon-animations.css";
-import styles from "./index.module.css";
-
-import classNames from "classnames";
-import { AnimatePresence, LayoutGroup } from "framer-motion";
-import {
 	PlayerControlsType,
 	VerticalCoverLayout,
 	enableLyricLineBlurEffectAtom,
 	enableLyricLineScaleEffectAtom,
+
 	enableLyricLineSpringAnimationAtom,
 	enableLyricRomanLineAtom,
 	enableLyricSwapTransRomanLineAtom,
@@ -83,13 +61,29 @@ import {
 	showMusicNameAtom,
 	showVolumeControlAtom,
 	verticalCoverLayoutAtom,
-} from "../../states/config";
+    MusicContextMode,
+	musicContextModeAtom,
+	onClickSmtcRepeatAtom,
+	onClickSmtcShuffleAtom,
+	RepeatMode,
+	smtcRepeatModeAtom,
+	smtcShuffleStateAtom,
+} from "@applemusic-like-lyrics/states";
+
 import { toDuration } from "../../utils";
+import { AutoLyricLayout } from "../../layout/auto";
 import { AudioFFTVisualizer } from "../AudioFFTVisualizer";
 import { AudioQualityTag } from "../AudioQualityTag";
+import { BouncingSlider } from "../BouncingSlider";
+import { ControlThumb } from "../ControlThumb";
+import { Cover } from "../Cover";
 import { MediaButton } from "../MediaButton";
+import { MusicInfo } from "../MusicInfo";
 import { PrebuiltToggleIconButton } from "../ToggleIconButton";
 import { PrebuiltToggleIconButtonType } from "../ToggleIconButton/prebuilt-enum";
+
+import { VolumeControl } from "../VolumeControlSlider";
+
 import IconForward from "./icon_forward.svg?react";
 import IconPause from "./icon_pause.svg?react";
 import IconPlay from "./icon_play.svg?react";
@@ -100,15 +94,8 @@ import RepeatOneActiveIcon from './repeat-one-active.svg?react';
 import ShuffleIcon from './shuffle.svg?react';
 import ShuffleActiveIcon from './shuffle-active.svg?react';
 
-import {
-	MusicContextMode,
-	musicContextModeAtom,
-	onClickSmtcRepeatAtom,
-	onClickSmtcShuffleAtom,
-	RepeatMode,
-	smtcRepeatModeAtom,
-	smtcShuffleStateAtom,
-} from "../../../../player/src/states";
+import "./icon-animations.css";
+import styles from "./index.module.css";
 
 const PrebuiltMusicInfo: FC<{
 	className?: string;

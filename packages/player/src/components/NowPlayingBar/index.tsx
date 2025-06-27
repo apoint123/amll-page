@@ -1,15 +1,3 @@
-import {
-	MediaButton,
-	TextMarquee,
-	isLyricPageOpenedAtom,
-	musicArtistsAtom,
-	musicCoverAtom,
-	musicNameAtom,
-	musicPlayingAtom,
-	onPlayOrResumeAtom,
-	onRequestNextSongAtom,
-	onRequestPrevSongAtom,
-} from "@applemusic-like-lyrics/react-full";
 import lyricIcon from "@iconify/icons-ic/round-lyrics";
 import { Icon } from "@iconify/react";
 import {
@@ -27,12 +15,27 @@ import IconForward from "../../assets/icon_forward.svg?react";
 import IconPause from "../../assets/icon_pause.svg?react";
 import IconPlay from "../../assets/icon_play.svg?react";
 import IconRewind from "../../assets/icon_rewind.svg?react";
-import {
-	hideNowPlayingBarAtom,
-	playlistCardOpenedAtom,
-} from "../../states/index.ts";
 import { NowPlaylistCard } from "../NowPlaylistCard/index.tsx";
 import styles from "./index.module.css";
+
+import {
+	MediaButton,
+	TextMarquee,
+} from "@applemusic-like-lyrics/react-full";
+
+import {
+	hideNowPlayingBarAtom,
+	isLyricPageOpenedAtom,
+	musicArtistsAtom,
+	musicCoverAtom,
+	musicNameAtom,
+	musicPlayingAtom,
+	onPlayOrResumeAtom,
+	onRequestNextSongAtom,
+	onRequestPrevSongAtom,
+	playlistCardOpenedAtom,
+} from "@applemusic-like-lyrics/states";
+
 
 export const NowPlayingBar: FC = () => {
 	const hideNowPlayingBar = useAtomValue(hideNowPlayingBarAtom);
@@ -56,14 +59,15 @@ export const NowPlayingBar: FC = () => {
 			const { top } = playbarEl.getBoundingClientRect();
 			document.body.style.setProperty(
 				"--amll-player-playbar-bottom",
-				`${innerHeight - top}px`,
+				`${window.innerHeight - top}px`,
 			);
 		};
 		const observer = new ResizeObserver(updateSafeBound);
-		addEventListener("resize", updateSafeBound);
+		window.addEventListener("resize", updateSafeBound);
 		observer.observe(playbarEl);
+		updateSafeBound();
 		return () => {
-			removeEventListener("resize", updateSafeBound);
+			window.removeEventListener("resize", updateSafeBound);
 			observer.disconnect();
 		};
 	}, []);

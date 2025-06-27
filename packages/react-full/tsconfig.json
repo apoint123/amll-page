@@ -18,6 +18,7 @@
         "downlevelIteration": true,
         "allowSyntheticDefaultImports": true,
         "allowJs": false,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "noEmit": true
     }
 }

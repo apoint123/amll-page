@@ -12,6 +12,7 @@
 		"downlevelIteration": true,
 		"allowSyntheticDefaultImports": true,
 		"allowImportingTsExtensions": true,
+		"noEmit": true,
 		"allowJs": false,
 		"stripInternal": true,
 		"noImplicitOverride": true,

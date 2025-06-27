@@ -1,18 +1,20 @@
-import {
-	hideLyricViewAtom,
-	isLyricPageOpenedAtom,
-	onPlayOrResumeAtom,
-	onRequestNextSongAtom,
-	onRequestPrevSongAtom,
-} from "@applemusic-like-lyrics/react-full";
 import { ContextMenu } from "@radix-ui/themes";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import type { FC } from "react";
 import { Trans } from "react-i18next";
 import { router } from "../../router.tsx";
-import { musicIdAtom, recordPanelOpenedAtom } from "../../states/index.ts";
-import { invoke } from "@tauri-apps/api/core";
+
+import {
+	hideLyricViewAtom,
+	isLyricPageOpenedAtom,
+	musicIdAtom,
+	onPlayOrResumeAtom,
+	onRequestNextSongAtom,
+	onRequestPrevSongAtom,
+	recordPanelOpenedAtom,
+} from "@applemusic-like-lyrics/states";
 
 export const AMLLContextMenuContent: FC = () => {
 	const [hideLyricView, setHideLyricView] = useAtom(hideLyricViewAtom);
