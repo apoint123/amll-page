@@ -13,7 +13,7 @@ import {
 	extensionMetaAtom,
 	loadedExtensionAtom,
 } from "../../states/extension.ts";
-import * as playerStates from "../../states/index.ts";
+import * as playerStates from "@applemusic-like-lyrics/states";
 import { PlayerExtensionContext, sourceMapOffsetLines } from "./ext-ctx.ts";
 
 const AsyncFunction: FunctionConstructor = Object.getPrototypeOf(

@@ -1,7 +1,7 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSetAtom } from "jotai";
 import { type FC, useEffect } from "react";
-import { autoDarkModeAtom } from "../../states";
+import { autoDarkModeAtom } from "@applemusic-like-lyrics/states";
 
 export const DarkThemeDetector: FC = () => {
 	const setAutoDarkMode = useSetAtom(autoDarkModeAtom);

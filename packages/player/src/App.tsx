@@ -1,12 +1,8 @@
-import {
-	isLyricPageOpenedAtom,
-	onClickAudioQualityTagAtom,
-} from "@applemusic-like-lyrics/react-full";
 import { Box, Theme } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
 import { platform, version } from "@tauri-apps/plugin-os";
 import classNames from "classnames";
-import { atom, useAtomValue, useStore } from "jotai";
+import { atom, useAtomValue, useSetAtom, useStore } from "jotai";
 import {
 	StrictMode,
 	Suspense,
@@ -34,13 +30,21 @@ import { router } from "./router.tsx";
 import {
 	DarkMode,
 	MusicContextMode,
-	audioQualityDialogOpenedAtom,
-	darkModeAtom,
-	displayLanguageAtom,
-	isDarkThemeAtom,
+
 	musicContextModeAtom,
+	darkModeAtom,
+	isDarkThemeAtom,
+	displayLanguageAtom,
+	isLyricPageOpenedAtom,
 	showStatJSFrameAtom,
-} from "./states/index.ts";
+
+	wsLyricOnlyModeAtom,
+	enableWsLyricsInSmtcModeAtom,
+
+	audioQualityDialogOpenedAtom,
+
+	onClickAudioQualityTagAtom,
+} from "@applemusic-like-lyrics/states";
 import { invoke } from "@tauri-apps/api/core";
 
 const ExtensionContext = lazy(() => import("./components/ExtensionContext"));
@@ -60,6 +64,15 @@ function App() {
 
 	const darkMode = useAtomValue(darkModeAtom);
 
+	const setWsLyricOnlyMode = useSetAtom(wsLyricOnlyModeAtom);
+	const enableWsLyrics = useAtomValue(enableWsLyricsInSmtcModeAtom);
+
+	useEffect(() => {
+		const isSmtcAndWsEnabled =
+			musicContextMode === MusicContextMode.SystemListener && enableWsLyrics;
+		setWsLyricOnlyMode(isSmtcAndWsEnabled);
+	}, [musicContextMode, enableWsLyrics, setWsLyricOnlyMode]);
+
 	useEffect(() => {
 		const syncThemeToWindow = async () => {
 			if (darkMode === DarkMode.Auto) {
@@ -78,7 +91,6 @@ function App() {
 
 	useEffect(() => {
 		const initializeWindow = async () => {
-
 			if ((window as any).__AMLL_PLAYER_INITIALIZED__) return;
 			(window as any).__AMLL_PLAYER_INITIALIZED__ = true;
 
@@ -92,7 +104,6 @@ function App() {
 				await appWindow.show();
 			}, 50);
 		};
-
 		initializeWindow();
 	}, [store]);
 
@@ -134,13 +145,14 @@ function App() {
 	return (
 		<>
 			{/* 上下文组件均不建议被 StrictMode 包含，以免重复加载扩展程序发生问题  */}
-			{musicContextMode === MusicContextMode.Local && <LocalMusicContext />}
-			{musicContextMode === MusicContextMode.WSProtocol && (
-				<WSProtocolMusicContext />
-			)}
+			{musicContextMode === MusicContextMode.Local && <LocalMusicContext key={MusicContextMode.Local} />}
 			{musicContextMode === MusicContextMode.SystemListener && (
-				<SystemListenerMusicContext />
+				<SystemListenerMusicContext key={MusicContextMode.SystemListener} />
 			)}
+			{(musicContextMode === MusicContextMode.WSProtocol ||
+				(musicContextMode === MusicContextMode.SystemListener &&
+					enableWsLyrics)) && <WSProtocolMusicContext key={MusicContextMode.WSProtocol} />}
+
 			<UpdateContext />
 			<ShotcutContext />
 			<DarkThemeDetector />

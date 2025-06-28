@@ -22,7 +22,7 @@ import { PageContainer } from "../../components/PageContainer/index.tsx";
 import { PlaylistCard } from "../../components/PlaylistCard/index.tsx";
 import { db } from "../../dexie.ts";
 import { router } from "../../router.tsx";
-import { MusicContextMode, musicContextModeAtom } from "../../states/index.ts";
+import { MusicContextMode, musicContextModeAtom } from "@applemusic-like-lyrics/states";
 import { updateInfoAtom } from "../../states/updater.ts";
 
 export const Component: FC = () => {

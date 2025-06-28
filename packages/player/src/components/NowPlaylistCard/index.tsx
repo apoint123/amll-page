@@ -19,7 +19,7 @@ import { type Song, db } from "../../dexie.ts";
 import {
 	currentPlaylistAtom,
 	currentPlaylistMusicIndexAtom,
-} from "../../states/index.ts";
+} from "@applemusic-like-lyrics/states";
 import { type SongData, emitAudioThread } from "../../utils/player.ts";
 import styles from "./index.module.css";
 

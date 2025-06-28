@@ -17,69 +17,53 @@ crate-type = ["staticlib", "cdylib", "lib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["devtools"] }
-# tauri-plugin-os = "2.0.0-rc"
-# tauri-plugin-fs = "2.0.0-rc"
-# tauri-plugin-dialog = "2.0.0-rc"
-# tauri = { git = "https://github.com/tauri-apps/tauri.git", features = [ "devtools" ] }
-tauri-plugin-os = { version = "2" }
-tauri-plugin-fs = { version = "2" }
-tauri-plugin-dialog = { version = "2" }
-tauri-plugin-shell = { version = "2" }
+anyhow = "1.0"
 anyhow-tauri = "1.0.0"
-
-base64 = "^0.22"
-image = "^0.25"
+crossbeam-channel = "0.5.15"
+futures = "0.3.28"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio-tungstenite = "0.27"
-anyhow = "1.0.72"
-futures = "0.3.28"
 symphonia = { version = "^0.5", features = ["all", "opt-simd"] }
-ws-protocol = { path = "../../ws-protocol" }
-amll-player-core = { path = "../../player-core" }
-amll-lyric = { path = "../../lyric" }
-tokio = { version = "1.45.1", features = [
-    "time",
-    "macros",
-    "process",
-    "sync",
-    "rt",
-    "rt-multi-thread",
-] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "sync", "time"] }
+tokio-tungstenite = "0.27"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-fxhash = "0.2.1"
-crossbeam-channel = "0.5.15"
+
+tauri = { version = "2", features = ["devtools"] }
+tauri-plugin-dialog = { version = "2" }
+tauri-plugin-fs = { version = "2" }
+tauri-plugin-opener = { version = "2" }
+tauri-plugin-os = { version = "2" }
+tauri-plugin-shell = { version = "2" }
+
+amll-player-core = { path = "../../player-core" }
+ws-protocol = { path = "../../ws-protocol" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-webview2-com = "*"
 smtc-suite = "2"
+webview2-com = "0.38"
+
 [target.'cfg(target_os = "android")'.dependencies]
-cpal = { version = "*", features = ["oboe-shared-stdcxx"] }
-tracing-android = "^0.2"
+cpal = { version = "0.16", features = ["oboe-shared-stdcxx"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-global-shortcut = "^2"
-# tauri-plugin-updater = "2.0.0-rc"
+tauri-plugin-global-shortcut = { version = "2" }
 tauri-plugin-updater = { version = "2" }
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
 # DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
+
 ffmpeg-backend = ["amll-player-core/ffmpeg"]
 
 [profile.dev.package."*"]
 opt-level = 1
 
 [profile.release]
-lto = true
-codegen-units = 1
 panic = "abort"
+codegen-units = 1
+lto = true
 opt-level = "s"
-debug = false
 strip = true
-
-# [patch.crates-io]
-# tauri = { git = "https://github.com/tauri-apps/tauri.git" }
+debug = false

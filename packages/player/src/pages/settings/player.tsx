@@ -83,9 +83,11 @@ import {
 	smtcSelectedSessionIdAtom,
 	smtcSessionsAtom,
 	smtcTextConversionModeAtom,
+	enableWsLyricsInSmtcModeAtom,
+	smtcTimeOffsetAtom,
 } from "@applemusic-like-lyrics/states";
 
-import { fftDataRangeAtom } from "../../states/index.ts";
+import { fftDataRangeAtom } from "@applemusic-like-lyrics/states";
 import { updateInfoAtom } from "../../states/updater.ts";
 
 const SettingEntry: FC<
@@ -118,8 +120,8 @@ const NumberSettings: FC<
 			<TextField.Root
 				{...props}
 				style={{ minWidth: "10em" }}
-				defaultValue={value}
-				onChange={(e) => setValue(e.currentTarget.valueAsNumber)}
+				defaultValue={String(value)}
+				onChange={(e) => setValue(e.currentTarget.valueAsNumber || 0)}
 			/>
 		</SettingEntry>
 	);
@@ -1096,6 +1098,8 @@ const SmtcSettings = () => {
 	const sessions = useAtomValue(smtcSessionsAtom);
 	const [selectedSession, setSelectedSession] = useAtom(smtcSelectedSessionIdAtom);
 	const [textConversion, setTextConversion] = useAtom(smtcTextConversionModeAtom);
+	const [enableWsLyrics, setEnableWsLyrics] = useAtom(enableWsLyricsInSmtcModeAtom);
+	const [offset, setOffset] = useAtom(smtcTimeOffsetAtom);
 
 	const sessionMenu = useMemo(() => [
 		{ label: t("page.settings.smtc.session.auto"), value: "null" },
@@ -1134,6 +1138,21 @@ const SmtcSettings = () => {
 	return (
 		<>
 			<SubTitle><Trans i18nKey="page.settings.smtc.subtitle">SMTC 监听设置</Trans></SubTitle>
+
+			<NumberSettings
+                label={t("page.settings.smtc.timeOffset.label", "时间轴偏移量 (ms)")}
+                description={t("page.settings.smtc.timeOffset.description", "校准歌词与歌曲的同步。正数解决歌词偏早，负数解决歌词偏晚。")}
+                configAtom={smtcTimeOffsetAtom}
+                type="number"
+                step={50}
+                placeholder="0"
+            />
+
+			<SwitchSettings
+                label={t("page.settings.smtc.enableWsLyrics.label", "启用外部 WebSocket 歌词源")}
+                description={t("page.settings.smtc.enableWsLyrics.description", "允许在 SMTC 模式下，通过 WebSocket (默认 127.0.0.1:9002) 接收外部程序提供的歌词。")}
+                configAtom={enableWsLyricsInSmtcModeAtom}
+            />
 
 			<SettingEntry
 				label={t("page.settings.smtc.session.label")}

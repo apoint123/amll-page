@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
 import { isLyricPageOpenedAtom } from "@applemusic-like-lyrics/states";
 import { CameraIcon, Cross1Icon, StopIcon } from "@radix-ui/react-icons";
-import { recordPanelOpenedAtom } from "../../states/index.ts";
+import { recordPanelOpenedAtom } from "@applemusic-like-lyrics/states";
 import { toast } from "react-toastify";
 import save from "save-file";
 

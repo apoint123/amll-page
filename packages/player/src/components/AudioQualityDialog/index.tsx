@@ -5,7 +5,7 @@ import { Trans } from "react-i18next";
 import {
 	audioQualityDialogOpenedAtom,
 	musicQualityAtom,
-} from "../../states/index.ts";
+} from "@applemusic-like-lyrics/states";
 
 export const AudioQualityDialog: FC = () => {
 	const [audioQualityDialogOpened, setAudioQualityDialogOpened] = useAtom(

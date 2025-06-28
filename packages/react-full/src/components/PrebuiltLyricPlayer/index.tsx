@@ -34,6 +34,7 @@ import {
 	musicNameAtom,
 	musicPlayingAtom,
 	musicPlayingPositionAtom,
+	correctedMusicPlayingPositionAtom,
 	musicQualityTagAtom,
 	musicVolumeAtom,
 	PlayerControlsType,
@@ -61,7 +62,7 @@ import {
 	showMusicNameAtom,
 	showVolumeControlAtom,
 	verticalCoverLayoutAtom,
-    MusicContextMode,
+	MusicContextMode,
 	musicContextModeAtom,
 	onClickSmtcRepeatAtom,
 	onClickSmtcShuffleAtom,
@@ -129,7 +130,7 @@ const PrebuiltMediaButtons: FC<{
 	const onRequestPrevSong = useAtomValue(onRequestPrevSongAtom).onEmit;
 	const onRequestNextSong = useAtomValue(onRequestNextSongAtom).onEmit;
 	const onPlayOrResume = useAtomValue(onPlayOrResumeAtom).onEmit;
-	
+
 	const musicContextMode = useAtomValue(musicContextModeAtom);
 	const isShuffleOn = useAtomValue(smtcShuffleStateAtom);
 	const repeatMode = useAtomValue(smtcRepeatModeAtom);
@@ -137,10 +138,10 @@ const PrebuiltMediaButtons: FC<{
 	const toggleShuffle = useSetAtom(onClickSmtcShuffleAtom);
 	const cycleRepeat = useSetAtom(onClickSmtcRepeatAtom);
 
-    const iconStyle = {
-        width: '1.3em',
-        height: '1.3em',
-    };
+	const iconStyle = {
+		width: '1.3em',
+		height: '1.3em',
+	};
 
 	const renderRepeatIcon = () => {
 		switch (repeatMode) {
@@ -162,7 +163,7 @@ const PrebuiltMediaButtons: FC<{
 					onClick={toggleShuffle}
 					disabled={musicContextMode !== MusicContextMode.SystemListener}
 				>
-					{isShuffleOn ? <ShuffleActiveIcon color="#ffffffff" style={iconStyle}/> : <ShuffleIcon color="#ffffffff" style={iconStyle}/>}
+					{isShuffleOn ? <ShuffleActiveIcon color="#ffffffff" style={iconStyle} /> : <ShuffleIcon color="#ffffffff" style={iconStyle} />}
 				</MediaButton>
 			)}
 			<MediaButton
@@ -187,7 +188,7 @@ const PrebuiltMediaButtons: FC<{
 			>
 				<IconForward color="#FFFFFF" />
 			</MediaButton>
-			
+
 			{showOtherButtons && (
 				<MediaButton
 					className={styles.songMediaButton}
@@ -203,8 +204,8 @@ const PrebuiltMediaButtons: FC<{
 
 const PrebuiltProgressBar: FC<{ disabled?: boolean }> = React.memo(({ disabled }) => {
 	const musicDuration = useAtomValue(musicDurationAtom);
-    
-	const musicPosition = useAtomValue(musicPlayingPositionAtom);
+
+	const musicPosition = useAtomValue(correctedMusicPlayingPositionAtom);
 
 	const musicQualityTag = useAtomValue(musicQualityTagAtom);
 	const onClickAudioQualityTag = useAtomValue(
@@ -212,25 +213,25 @@ const PrebuiltProgressBar: FC<{ disabled?: boolean }> = React.memo(({ disabled }
 	).onEmit;
 	const onSeekPosition = useAtomValue(onSeekPositionAtom).onEmit;
 
-    const throttledSeek = useThrottle((position: number) => {
-        onSeekPosition?.(position);
-    }, 100);
+	const throttledSeek = useThrottle((position: number) => {
+		onSeekPosition?.(position);
+	}, 100);
 
-    const TimeLabel: FC<{ isRemaining?: boolean }> = ({ isRemaining }) => {
-        const currentPosition = useAtomValue(musicPlayingPositionAtom);
-        const duration = useAtomValue(musicDurationAtom);
-        const time = isRemaining ? (currentPosition - duration) / 1000 : currentPosition / 1000;
-        return <>{toDuration(time)}</>;
-    };
+	const TimeLabel: FC<{ isRemaining?: boolean }> = ({ isRemaining }) => {
+		const currentPosition = useAtomValue(correctedMusicPlayingPositionAtom);
+		const duration = useAtomValue(musicDurationAtom);
+		const time = isRemaining ? (currentPosition - duration) / 1000 : currentPosition / 1000;
+		return <>{toDuration(time)}</>;
+	};
 
 	return (
 		<div>
 			<BouncingSlider
 				min={0}
 				max={musicDuration}
-                value={musicPosition}
+				value={musicPosition}
 				onChange={throttledSeek}
-                disabled={disabled}
+				disabled={disabled}
 			/>
 			<div className={styles.progressBarLabels}>
 				<div><TimeLabel /></div>
@@ -261,7 +262,7 @@ const PrebuiltCoreLyricPlayer: FC<{
 	const musicIsPlaying = useAtomValue(musicPlayingAtom);
 	const lyricLines = useAtomValue(musicLyricLinesAtom);
 	const isLyricPageOpened = useAtomValue(isLyricPageOpenedAtom);
-	const musicPlayingPosition = useAtomValue(musicPlayingPositionAtom);
+	const musicPlayingPosition = useAtomValue(correctedMusicPlayingPositionAtom);
 
 	const lyricFontFamily = useAtomValue(lyricFontFamilyAtom);
 	const lyricFontWeight = useAtomValue(lyricFontWeightAtom);
@@ -356,9 +357,9 @@ const PrebuiltVolumeControl: FC<{
 	const onChangeVolume = useAtomValue(onChangeVolumeAtom).onEmit;
 	const showVolumeControl = useAtomValue(showVolumeControlAtom);
 
-    const throttledOnChangeVolume = useThrottle((volume: number) => {
-        onChangeVolume?.(volume);
-    }, 100);
+	const throttledOnChangeVolume = useThrottle((volume: number) => {
+		onChangeVolume?.(volume);
+	}, 100);
 
 	if (showVolumeControl)
 		return (

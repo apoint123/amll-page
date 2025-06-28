@@ -17,7 +17,7 @@ import {
 	musicContextModeAtom,
 	wsProtocolConnectedAddrsAtom,
 	wsProtocolListenAddrAtom,
-} from "../../states/index.ts";
+} from "@applemusic-like-lyrics/states";
 
 export const Component: FC = () => {
 	const [wsProtocolListenAddr, setWsProtocolListenAddr] = useAtom(

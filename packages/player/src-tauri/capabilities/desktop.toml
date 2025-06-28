@@ -16,3 +16,9 @@ identifier = "global-shortcut:allow-is-registered"
 identifier = "global-shortcut:allow-register"
 [[permissions]]
 identifier = "global-shortcut:allow-unregister"
+
+[[permissions]]
+identifier = "opener:allow-reveal-item-in-dir"
+allow = [
+  { path = "$APPDATA/**" }
+]

@@ -15,7 +15,6 @@ import { BaseDirectory } from "@tauri-apps/api/path";
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
 import { copyFile, mkdir, remove, rename } from "@tauri-apps/plugin-fs";
 import { platform } from "@tauri-apps/plugin-os";
-import { open as shellOpen } from "@tauri-apps/plugin-shell";
 import { atom, useAtomValue, useStore } from "jotai";
 import type { FC } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -25,6 +24,7 @@ import {
 	extensionMetaAtom,
 } from "../../states/extension.ts";
 import { restartApp } from "../../utils/player.ts";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 
 const requireRestartAtom = atom(false);
 
@@ -114,7 +114,7 @@ export const ExtensionTab: FC = () => {
 						await mkdir(extensionDir, {
 							recursive: true,
 						});
-						await shellOpen(extensionDir);
+						await revealItemInDir(extensionDir);
 					}}
 				>
 					<Trans i18nKey="settings.extension.openPluginDirectory">

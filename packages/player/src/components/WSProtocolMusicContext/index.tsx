@@ -11,15 +11,17 @@ import {
 	musicNameAtom,
 	musicPlayingAtom,
 	musicPlayingPositionAtom,
+	musicVolumeAtom,
 	onChangeVolumeAtom,
 	onLyricLineClickAtom,
 	onPlayOrResumeAtom,
 	onRequestNextSongAtom,
 	onRequestPrevSongAtom,
 	onSeekPositionAtom,
+	wsLyricOnlyModeAtom,
 } from "@applemusic-like-lyrics/states";
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { type Event, listen } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { type FC, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -38,11 +40,15 @@ export const WSProtocolMusicContext: FC = () => {
 	const setConnectedAddrs = useSetAtom(wsProtocolConnectedAddrsAtom);
 	const store = useStore();
 	const { t } = useTranslation();
-	const fftPlayer = useRef<FFTPlayer>();
+	const fftPlayer = useRef<FFTPlayer | undefined>(undefined);
+
+	const isLyricOnlyMode = useAtomValue(wsLyricOnlyModeAtom);
 
 	useEffect(() => {
-		emitAudioThread("pauseAudio");
-	}, []);
+		if (!isLyricOnlyMode) {
+			emitAudioThread("pauseAudio");
+		}
+	}, [isLyricOnlyMode]);
 
 	const fftDataRange = useAtomValue(fftDataRangeAtom);
 
@@ -55,7 +61,7 @@ export const WSProtocolMusicContext: FC = () => {
 
 		const onFFTFrame = () => {
 			if (canceled) return;
-			fft.read(result);
+			fftPlayer.current?.read(result);
 			store.set(fftDataAtom, [...result]);
 			requestAnimationFrame(onFFTFrame);
 		};
@@ -64,17 +70,24 @@ export const WSProtocolMusicContext: FC = () => {
 
 		return () => {
 			canceled = true;
+			fftPlayer.current?.free();
 			fftPlayer.current = undefined;
-			fft.free();
 		};
 	}, [fftDataRange, store]);
 
 	useEffect(() => {
+		if (!wsProtocolListenAddr && !isLyricOnlyMode) {
+			return;
+		}
+
 		setConnectedAddrs(new Set());
-		store.set(musicNameAtom, "等待连接中");
-		store.set(musicAlbumNameAtom, "");
-		store.set(musicCoverAtom, "");
-		store.set(musicArtistsAtom, []);
+
+		if (!isLyricOnlyMode) {
+			store.set(musicNameAtom, "等待连接中");
+			store.set(musicAlbumNameAtom, "");
+			store.set(musicCoverAtom, "");
+			store.set(musicArtistsAtom, []);
+		}
 
 		function sendWSMessage<T extends keyof WSBodyMessageMap>(
 			type: T,
@@ -90,53 +103,38 @@ export const WSProtocolMusicContext: FC = () => {
 			});
 		}
 
-		const toEmit = <T,>(onEmit: T) => ({
-			onEmit,
-		});
-		store.set(
-			onRequestNextSongAtom,
-			toEmit(() => {
-				sendWSMessage("forwardSong");
-			}),
-		);
-		store.set(
-			onRequestPrevSongAtom,
-			toEmit(() => {
-				sendWSMessage("backwardSong");
-			}),
-		);
-		store.set(
-			onPlayOrResumeAtom,
-			toEmit(() => {
-				sendWSMessage(store.get(musicPlayingAtom) ? "pause" : "resume");
-			}),
-		);
-		store.set(
-			onSeekPositionAtom,
-			toEmit((progress) => {
-				sendWSMessage("seekPlayProgress", {
-					progress: progress | 0,
-				});
-				playerRef?.lyricPlayer?.resetScroll();
-			}),
-		);
-		store.set(
-			onLyricLineClickAtom,
-			toEmit((evt, playerRef) => {
-				sendWSMessage("seekPlayProgress", {
-					progress: evt.line.getLine().startTime | 0,
-				});
-				playerRef?.lyricPlayer?.resetScroll();
-			}),
-		);
-		store.set(
-			onChangeVolumeAtom,
-			toEmit((volume) => {
-				sendWSMessage("setVolume", {
-					volume,
-				});
-			}),
-		);
+		if (!isLyricOnlyMode) {
+			const toEmit = <T,>(onEmit: T) => ({ onEmit });
+			store.set(onRequestNextSongAtom, toEmit(() => sendWSMessage("forwardSong")));
+			store.set(onRequestPrevSongAtom, toEmit(() => sendWSMessage("backwardSong")));
+			store.set(
+				onPlayOrResumeAtom,
+				toEmit(() => {
+					sendWSMessage(store.get(musicPlayingAtom) ? "pause" : "resume");
+				}),
+			);
+			store.set(
+				onSeekPositionAtom,
+				toEmit((progress) => {
+					sendWSMessage("seekPlayProgress", { progress: progress | 0 });
+				}),
+			);
+			store.set(
+				onLyricLineClickAtom,
+				toEmit((evt, playerRef) => {
+					sendWSMessage("seekPlayProgress", {
+						progress: evt.line.getLine().startTime | 0,
+					});
+					playerRef?.lyricPlayer?.resetScroll();
+				}),
+			);
+			store.set(
+				onChangeVolumeAtom,
+				toEmit((volume) => {
+					sendWSMessage("setVolume", { volume });
+				}),
+			);
+		}
 
 		const unlistenConnected = listen<string>(
 			"on-ws-protocol-client-connected",
@@ -146,100 +144,51 @@ export const WSProtocolMusicContext: FC = () => {
 			},
 		);
 
-		interface WSArtist {
-			id: string;
-			name: string;
-		}
-
-		interface WSLyricWord {
-			startTime: number;
-			endTime: number;
-			word: string;
-		}
-
-		interface WSLyricLine {
-			startTime: number;
-			endTime: number;
-			words: WSLyricWord[];
-			isBG: boolean;
-			isDuet: boolean;
-			translatedLyric: string;
-			romanLyric: string;
-		}
-
+		interface WSArtist { id: string; name: string; }
+		interface WSLyricWord { startTime: number; endTime: number; word: string; }
+		interface WSLyricLine { startTime: number; endTime: number; words: WSLyricWord[]; isBG: boolean; isDuet: boolean; translatedLyric: string; romanLyric: string; }
 		type WSBodyMessageMap = {
-			ping: undefined;
-			pong: undefined;
-			setMusicInfo: {
-				musicId: string;
-				musicName: string;
-				albumId: string;
-				albumName: string;
-				artists: WSArtist[];
-				duration: number;
-			};
-			setMusicAlbumCoverImageURI: {
-				imgUrl: string;
-			};
-			setMusicAlbumCoverImageData: {
-				data: number[];
-			};
-			onPlayProgress: {
-				progress: number;
-			};
-			onVolumeChanged: {
-				volume: number;
-			};
-			onPaused: undefined;
-			onResumed: undefined;
-			onAudioData: {
-				data: number[];
-			};
-			setLyric: {
-				data: WSLyricLine[];
-			};
-			setLyricFromTTML: {
-				data: string;
-			};
-			pause: undefined;
-			resume: undefined;
-			forwardSong: undefined;
-			backwardSong: undefined;
-			setVolume: {
-				volume: number;
-			};
-			seekPlayProgress: {
-				progress: number;
-			};
+			ping: undefined; pong: undefined;
+			setMusicInfo: { musicId: string; musicName: string; albumId: string; albumName: string; artists: WSArtist[]; duration: number; };
+			setMusicAlbumCoverImageURI: { imgUrl: string; };
+			setMusicAlbumCoverImageData: { data: number[]; };
+			onPlayProgress: { progress: number; };
+			onVolumeChanged: { volume: number; };
+			onPaused: undefined; onResumed: undefined;
+			onAudioData: { data: number[]; };
+			setLyric: { data: WSLyricLine[]; };
+			setLyricFromTTML: { data: string; };
+			pause: undefined; resume: undefined; forwardSong: undefined; backwardSong: undefined;
+			setVolume: { volume: number; };
+			seekPlayProgress: { progress: number; };
 		};
-
-		type WSBodyMap = {
-			[T in keyof WSBodyMessageMap]: {
-				type: T;
-				value: WSBodyMessageMap[T];
-			};
-		};
+		type WSBodyMap = { [T in keyof WSBodyMessageMap]: { type: T; value: WSBodyMessageMap[T]; }; };
 
 		let curCoverBlobUrl = "";
 		const onBodyChannel = new Channel<WSBodyMap[keyof WSBodyMessageMap]>();
 
 		function onBody(payload: WSBodyMap[keyof WSBodyMessageMap]) {
-			switch (payload.type) {
-				case "ping": {
-					sendWSMessage("pong");
-					break;
+			if (payload.type === 'ping') {
+				sendWSMessage('pong');
+				return;
+			}
+
+			if (isLyricOnlyMode) {
+				switch (payload.type) {
+					case 'setLyric':
+					case 'setLyricFromTTML':
+						break;
+					default:
+						return;
 				}
+			}
+
+			switch (payload.type) {
 				case "setMusicInfo": {
 					store.set(musicIdAtom, payload.value.musicId);
 					store.set(musicNameAtom, payload.value.musicName);
 					store.set(musicDurationAtom, payload.value.duration);
-					store.set(
-						musicArtistsAtom,
-						payload.value.artists.map((v) => ({
-							id: v.id,
-							name: v.name,
-						})),
-					);
+					store.set(musicArtistsAtom, payload.value.artists.map((v) => ({ id: v.id, name: v.name })));
 					store.set(musicPlayingPositionAtom, 0);
 					break;
 				}
@@ -263,7 +212,7 @@ export const WSProtocolMusicContext: FC = () => {
 					break;
 				}
 				case "onVolumeChanged": {
-					store.set(onChangeVolumeAtom, payload.value.volume);
+					store.set(musicVolumeAtom, payload.value.volume);
 					break;
 				}
 				case "onPlayProgress": {
@@ -279,20 +228,13 @@ export const WSProtocolMusicContext: FC = () => {
 					break;
 				}
 				case "onAudioData": {
-					fftPlayer.current?.pushDataI16(
-						48000,
-						2,
-						new Int16Array(new Uint8Array(payload.value.data).buffer),
-					);
+					fftPlayer.current?.pushDataI16(48000, 2, new Int16Array(new Uint8Array(payload.value.data).buffer));
 					break;
 				}
 				case "setLyric": {
 					const processed = payload.value.data.map((line) => ({
 						...line,
-						words: line.words.map((word) => ({
-							...word,
-							obscene: false,
-						})),
+						words: line.words.map((word) => ({ ...word, obscene: false })),
 					}));
 					if (processed.length > 0) {
 						store.set(hideLyricViewAtom, false);
@@ -305,10 +247,7 @@ export const WSProtocolMusicContext: FC = () => {
 						const data = parseTTML(payload.value.data);
 						const processed = data.lines.map((line) => ({
 							...line,
-							words: line.words.map((word) => ({
-								...word,
-								obscene: false,
-							})),
+							words: line.words.map((word) => ({ ...word, obscene: false })),
 						}));
 						store.set(musicLyricLinesAtom, processed);
 					} catch (e) {
@@ -324,11 +263,7 @@ export const WSProtocolMusicContext: FC = () => {
 					break;
 				}
 				default:
-					console.log(
-						"on-ws-protocol-client-body",
-						"未处理的报文（暂不支持）",
-						payload,
-					);
+					console.log("on-ws-protocol-client-body", "未处理的报文（暂不支持）", payload);
 			}
 		}
 
@@ -346,10 +281,8 @@ export const WSProtocolMusicContext: FC = () => {
 			setConnectedAddrs(new Set(addrs)),
 		);
 		invoke("ws_close_connection").then(() => {
-			invoke("ws_reopen_connection", {
-				addr: wsProtocolListenAddr,
-				channel: onBodyChannel,
-			});
+			const addr = wsProtocolListenAddr || "127.0.0.1:11444";
+			invoke("ws_reopen_connection", { addr, channel: onBodyChannel });
 		});
 		return () => {
 			unlistenConnected.then((u) => u());
@@ -358,10 +291,16 @@ export const WSProtocolMusicContext: FC = () => {
 			invoke("ws_close_connection");
 			if (curCoverBlobUrl) {
 				URL.revokeObjectURL(curCoverBlobUrl);
-				store.set(musicCoverAtom, "");
+				if (!isLyricOnlyMode) {
+					store.set(musicCoverAtom, "");
+				}
 			}
 		};
-	}, [wsProtocolListenAddr, setConnectedAddrs, store, t]);
+	}, [wsProtocolListenAddr, setConnectedAddrs, store, t, isLyricOnlyMode]);
+
+	if (isLyricOnlyMode) {
+		return null;
+	}
 
 	return (
 		<>
