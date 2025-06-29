@@ -33,6 +33,7 @@
       "dependsOn": [
         "^build:dev"
       ],
+      "maxParallel": 1,
       "outputs": [
         "{projectRoot}/dist",
         "{projectRoot}/pkg"
