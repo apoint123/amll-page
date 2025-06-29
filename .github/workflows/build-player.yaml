@@ -96,11 +96,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libasound2-dev libappindicator3-dev libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: 安装 wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
       - name: 构建 AMLL Full React 包
         run: |
           pnpm i
-          pnpm -g i wasm-pack
-          pnpm lerna run build --scope player
+          pnpm nx build player
         env:
           AMLL_GITHUB_IS_ACTION: true
       - name: 生成开发构建版本号
