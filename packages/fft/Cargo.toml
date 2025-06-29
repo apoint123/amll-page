@@ -31,3 +31,6 @@ console_error_panic_hook = { version = "0.1", optional = true }
 # compared to the default allocator's ~10K. It is slower than the default
 # allocator, however.
 wee_alloc = { version = "0.4", optional = true }
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-O", "--enable-reference-types"]

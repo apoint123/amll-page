@@ -31,3 +31,6 @@ wee_alloc = { version = "^0.4", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "^0.3"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-O", "--enable-reference-types"]
