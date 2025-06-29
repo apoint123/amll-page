@@ -23,7 +23,10 @@
 			"icons/icon.icns",
 			"icons/icon.ico"
 		],
-		"createUpdaterArtifacts": true
+		"createUpdaterArtifacts": true,
+		"android": {
+			"minSdkVersion": 26
+		}
 	},
 	"productName": "AMLL Player",
 	"version": "0.0.1",
