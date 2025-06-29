@@ -2,8 +2,8 @@
 
 use std::{
     sync::{
-        atomic::{AtomicBool, AtomicU8},
         Arc,
+        atomic::{AtomicBool, AtomicU8},
     },
     time::Duration,
 };
@@ -38,7 +38,7 @@ pub struct AudioStreamPlayer<T: AudioOutputSample> {
     stream: Stream,
     is_dead: Arc<AtomicBool>,
     prod: rb::Producer<T>,
-    volume: Arc<AtomicU8>,
+    volume: Arc<std::sync::atomic::AtomicU32>,
     resampler: Option<SincFixedOutResampler<T>>,
     resampler_target_channels: usize,
     resampler_duration: usize,
@@ -93,13 +93,14 @@ impl<T: AudioOutputSample> AudioOutput for AudioStreamPlayer<T> {
     }
 
     fn set_volume(&mut self, volume: f64) {
-        let volume = (volume * 255.).clamp(0., 255.) as u8;
+        let volume_f32 = volume as f32;
         self.volume
-            .store(volume, std::sync::atomic::Ordering::Relaxed);
+            .store(volume_f32.to_bits(), std::sync::atomic::Ordering::Relaxed);
     }
 
     fn volume(&self) -> f64 {
-        self.volume.load(std::sync::atomic::Ordering::Relaxed) as f64 / 255.
+        let bits = self.volume.load(std::sync::atomic::Ordering::Relaxed);
+        f32::from_bits(bits) as f64
     }
 
     fn write(&mut self, decoded: symphonia::core::audio::AudioBufferRef<'_>) {
@@ -171,33 +172,62 @@ fn init_audio_stream_inner<T: AudioOutputSample + Into<f64>>(
     ring_buf_size_ms: usize,
     selected_config: StreamConfig,
 ) -> Box<dyn AudioOutput> {
-    let channels = selected_config.channels;
-    let ring_len =
-        ((ring_buf_size_ms * selected_config.sample_rate.0 as usize) / 1000) * channels as usize;
+    let channels = selected_config.channels as usize;
+    let ring_len = ((ring_buf_size_ms * selected_config.sample_rate.0 as usize) / 1000) * channels;
     info!(
         "音频输出流环缓冲区大小为 {} 个样本（约为 {}ms 的缓冲）",
         ring_len, ring_buf_size_ms
     );
     let ring = rb::SpscRb::<T>::new(ring_len);
     let prod = ring.producer();
-    let cons = ring.consumer();
+    let mut cons = ring.consumer();
     let is_dead = Arc::new(AtomicBool::new(false));
     let is_dead_c = Arc::clone(&is_dead);
-    let volume: Arc<_> = Arc::new(AtomicU8::new(u8::MAX >> 1));
+    let volume: Arc<_> = Arc::new(std::sync::atomic::AtomicU32::new((0.5f32).to_bits()));
     let volume_c = volume.clone();
     let mut is_drained = false;
+
+    let mut current_vol = f32::from_bits(volume_c.load(std::sync::atomic::Ordering::Relaxed));
+
     let stream = output
         .build_output_stream::<T, _, _>(
             &selected_config,
-            move |data, _info| {
-                if let Ok(written) = cons.read(data) {
+            move |data: &mut [T], _info| {
+                let read_len = cons.read(data).unwrap_or(0);
+
+                if read_len > 0 {
                     is_drained = false;
-                    data[written..].fill(T::MID);
-                    let volume = volume_c.load(std::sync::atomic::Ordering::Relaxed) as f32 / 255.;
-                    data.iter_mut().for_each(|x| {
-                        let s: f32 = (*x).into_sample();
-                        *x = (s * volume).into_sample();
-                    });
+
+                    let target_vol_bits = volume_c.load(std::sync::atomic::Ordering::Relaxed);
+                    let target_vol = f32::from_bits(target_vol_bits);
+
+                    if (target_vol - current_vol).abs() < 1e-6 {
+                         if (target_vol - 1.0).abs() > 1e-6 {
+                            for sample in data[..read_len].iter_mut() {
+                                let s: f32 = (*sample).into_sample();
+                                *sample = (s * target_vol).into_sample();
+                            }
+                        }
+                    } else {
+                        let frame_count = read_len / channels;
+                        if frame_count > 0 {
+                            let vol_increment_per_frame = (target_vol - current_vol) / (frame_count as f32);
+
+                            for i in 0..frame_count {
+                                current_vol += vol_increment_per_frame;
+                                let frame_start = i * channels;
+                                let frame_end = frame_start + channels;
+                                for sample in data[frame_start..frame_end].iter_mut() {
+                                    let s: f32 = (*sample).into_sample();
+                                    *sample = (s * current_vol).into_sample();
+                                }
+                            }
+                        }
+                        current_vol = target_vol;
+                    }
+                    if read_len < data.len() {
+                        data[read_len..].fill(T::MID);
+                    }
                 } else {
                     data.fill(T::MID);
                     if !is_drained {
@@ -258,38 +288,62 @@ pub fn init_audio_player(
             .find(|d| d.name().unwrap_or_default() == output_device_name)
             .context("找不到指定的输出设备")?
     };
+
     info!(
         "已初始化输出音频设备为 {}",
         output.name().unwrap_or_default()
     );
-    let configs = output
+
+    let supported_configs = output
         .supported_output_configs()
         .context("无法获取输出配置")?
         .collect::<Vec<_>>();
-    let mut selected_config = StreamConfig {
-        channels: 2,
-        sample_rate: SampleRate(0),
-        buffer_size: cpal::BufferSize::Default,
-    };
-    let mut selected_sample_format = SampleFormat::F32;
-    for config in configs {
-        info!(
-            "已找到配置 {}hz-{}hz {} 通道 {}",
-            config.min_sample_rate().0,
-            config.max_sample_rate().0,
-            config.channels(),
-            config.sample_format()
-        );
-        if config.channels() > selected_config.channels
-            || config.min_sample_rate().0 > selected_config.sample_rate.0
-            || get_sample_format_quality_level(config.sample_format())
-                > get_sample_format_quality_level(selected_sample_format)
-        {
-            selected_config.channels = config.channels();
-            selected_config.sample_rate.0 = config.min_sample_rate().0;
-            selected_sample_format = config.sample_format();
-        }
-    }
+
+    let (selected_config, selected_sample_format) = supported_configs
+        .into_iter()
+        .filter_map(|config_range| {
+            let channels = config_range.channels();
+            if !(1..=2).contains(&channels) || config_range.max_sample_rate().0 < 22050 {
+                return None;
+            }
+
+            let sample_rate = if (config_range.min_sample_rate().0
+                ..=config_range.max_sample_rate().0)
+                .contains(&48000)
+            {
+                SampleRate(48000)
+            } else if (config_range.min_sample_rate().0..=config_range.max_sample_rate().0)
+                .contains(&44100)
+            {
+                SampleRate(44100)
+            } else {
+                config_range.max_sample_rate()
+            };
+
+            let score = {
+                let mut s = 0;
+                if sample_rate.0 == 48000 {
+                    s += 100;
+                } else if sample_rate.0 == 44100 {
+                    s += 90;
+                }
+
+                if channels == 2 {
+                    s += 20;
+                } else {
+                    s += 10;
+                }
+
+                s += get_sample_format_quality_level(config_range.sample_format()) as i32 * 5;
+                s
+            };
+
+            Some((score, config_range.with_sample_rate(sample_rate)))
+        })
+        .max_by_key(|(score, _)| *score)
+        .map(|(_, config)| (config.config(), config.sample_format()))
+        .context("未能找到任何适合播放的格式")?;
+
     info!(
         "尝试通过配置 {}hz {} 通道 {} 格式创建输出流",
         selected_config.sample_rate.0, selected_config.channels, selected_sample_format,
@@ -415,8 +469,9 @@ impl AudioOutputSender {
 // TODO: 允许指定需要的输出设备
 pub fn create_audio_output_thread() -> AudioOutputSender {
     let (pcm_tx, mut pcm_rx) = tokio::sync::mpsc::channel::<OwnedAudioBuffer>(2);
-    let (tx, mut msg_rx) = tokio::sync::mpsc::channel::<AudioOutputMessage>(1);
+    let (tx, mut msg_rx) = tokio::sync::mpsc::channel::<AudioOutputMessage>(128);
     let handle = tokio::runtime::Handle::current();
+
     let poll_default_tx = tx.clone();
     // 通过轮询检测是否需要重新创建音频输出设备流
     // TODO: 如果 CPAL 支持依照系统默认输出自动更新输出流，那么这段代码就可以删掉了（https://github.com/RustAudio/cpal/issues/740）
@@ -450,57 +505,23 @@ pub fn create_audio_output_thread() -> AudioOutputSender {
             output.set_volume(current_volume);
             output.stream().play().unwrap();
         }
-        let mut current_id = 0;
         info!("音频线程正在开始工作！");
+
         loop {
-            enum PollResult {
-                Pcm(OwnedAudioBuffer),
-                Msg(AudioOutputMessage),
-            }
-            let poll_result = handle_c.block_on(async {
-                tokio::select! {
-                    biased;
-                    msg = msg_rx.recv() => {
-                        msg.map(PollResult::Msg)
-                    }
-                    pcm = pcm_rx.recv() => {
-                        pcm.map(PollResult::Pcm)
-                    }
-                }
-            });
-            match poll_result {
-                Some(PollResult::Pcm(pcm)) => {
-                    let mut should_recrate = false;
-                    if let Some(output) = &mut output {
-                        if output.is_dead() {
-                            should_recrate = true;
-                            output_name = "".to_string();
-                            info!("现有输出设备已断开，正在重新初始化播放器");
-                        } else {
-                            output.write(pcm.as_audio_buffer_ref());
-                        }
-                    }
-                    if should_recrate {
-                        output = init_audio_player("", None).ok();
-                        if let Some(output) = &mut output {
-                            output.set_volume(current_volume);
-                            output.stream().play().unwrap();
-                        }
-                    }
-                }
-                Some(PollResult::Msg(msg)) => match msg {
+            let mut process_msg =
+                |msg: AudioOutputMessage, output: &mut Option<Box<dyn AudioOutput>>| match msg {
                     AudioOutputMessage::ChangeOutput(new_output_name) => {
                         match init_audio_player(&new_output_name, ring_buf_size_ms) {
                             Ok(mut new_output) => {
                                 output_name = new_output_name;
                                 new_output.set_volume(current_volume);
                                 new_output.stream().play().unwrap();
-                                output = Some(new_output);
+                                *output = Some(new_output);
                                 info!("已切换输出设备")
                             }
                             Err(err) => {
                                 warn!("无法切换到输出设备 {new_output_name}: {err}");
-                                output = None;
+                                *output = None;
                             }
                         }
                     }
@@ -510,22 +531,66 @@ pub fn create_audio_output_thread() -> AudioOutputSender {
                                 ring_buf_size_ms = Some(new_size);
                                 new_output.set_volume(current_volume);
                                 new_output.stream().play().unwrap();
-                                output = Some(new_output);
+                                *output = Some(new_output);
                                 info!("已切换输出设备（设置回环流大小）")
                             }
                             Err(err) => {
                                 warn!("无法切换到输出设备（设置回环流大小） {output_name}: {err}");
-                                output = None;
+                                *output = None;
                             }
                         }
                     }
                     AudioOutputMessage::SetVolume(volume) => {
-                        if let Some(output) = &mut output {
-                            output.set_volume(volume);
+                        current_volume = volume;
+                        if let Some(out) = output {
+                            out.set_volume(volume);
                         }
                     }
-                    AudioOutputMessage::ClearBuffer => while pcm_rx.try_recv().is_ok() {},
-                },
+                    AudioOutputMessage::ClearBuffer => {}
+                };
+
+            let poll_result = handle_c.block_on(async {
+                tokio::select! {
+                    biased;
+                    Some(msg) = msg_rx.recv() => Some(Err(msg)),
+                    Some(pcm) = pcm_rx.recv() => Some(Ok(pcm)),
+                    else => None,
+                }
+            });
+
+            match poll_result {
+                Some(Ok(pcm)) => {
+                    let mut should_recreate = false;
+                    if let Some(out) = &mut output {
+                        if out.is_dead() {
+                            should_recreate = true;
+                            output_name = "".to_string();
+                            info!("现有输出设备已断开，正在重新初始化播放器");
+                        } else {
+                            out.write(pcm.as_audio_buffer_ref());
+                        }
+                    }
+                    if should_recreate {
+                        output = init_audio_player("", None).ok();
+                        if let Some(out) = &mut output {
+                            out.set_volume(current_volume);
+                            out.stream().play().unwrap();
+                        }
+                    }
+                }
+                Some(Err(first_msg)) => {
+                    if matches!(first_msg, AudioOutputMessage::ClearBuffer) {
+                        while pcm_rx.try_recv().is_ok() {}
+                    }
+                    process_msg(first_msg, &mut output);
+
+                    while let Ok(msg) = msg_rx.try_recv() {
+                        if matches!(msg, AudioOutputMessage::ClearBuffer) {
+                            while pcm_rx.try_recv().is_ok() {}
+                        }
+                        process_msg(msg, &mut output);
+                    }
+                }
                 None => {
                     break;
                 }

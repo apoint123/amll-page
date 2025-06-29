@@ -14,6 +14,7 @@ pub async fn local_player_send_msg(msg: AudioThreadEventMessage<AudioThreadMessa
     }
 }
 
+#[cfg_attr(not(mobile), allow(unused_mut))]
 async fn local_player_main<R: Runtime>(manager: impl Manager<R> + Clone + Send + Sync + 'static) {
     let mut player = AudioPlayer::new(AudioPlayerConfig {});
     let handler = player.handler();

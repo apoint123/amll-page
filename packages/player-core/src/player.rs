@@ -8,6 +8,7 @@ use std::{
 
 use anyhow::Context;
 
+use easer::functions::*;
 use media_state::{MediaStateManager, MediaStateManagerBackend, MediaStateMessage};
 use output::create_audio_output_thread;
 use symphonia::core::io::{MediaSource, MediaSourceStream, MediaSourceStreamOptions};
@@ -28,6 +29,8 @@ use super::{
     AudioThreadMessage, SongData, audio_quality::AudioQuality, fft_player::FFTPlayer,
     output::AudioOutputSender,
 };
+
+const FADE_DURATION: Duration = Duration::from_millis(200);
 
 #[derive(Debug, Default, Clone, PartialEq)]
 struct AudioPlayerTaskData {
@@ -94,7 +97,9 @@ pub struct AudioPlayer {
     msg_receiver: AudioPlayerMessageReceiver,
 
     player: AudioOutputSender,
-    volume: f64,
+    current_volume: f64,
+    user_volume: f64,
+    fade_task: Option<AbortHandle>,
     is_playing: bool,
 
     playlist: Vec<SongData>,
@@ -254,7 +259,9 @@ impl AudioPlayer {
             msg_receiver,
             player,
             current_play_task_handle: None,
-            volume: 0.5,
+            current_volume: 0.5,
+            user_volume: 0.5,
+            fade_task: None,
             playlist,
             playlist_inited: false,
             current_song: None,
@@ -405,6 +412,9 @@ impl AudioPlayer {
                 AudioThreadMessage::ResumeAudio => {
                     self.is_playing = true;
                     info!("开始继续播放歌曲！");
+
+                    self.start_fade(self.user_volume, FADE_DURATION).await;
+
                     let _ = self.play_task_sx.send(AudioThreadMessage::ResumeAudio);
                     if let Some(x) = &self.media_state_manager {
                         let _ = x.set_playing(true);
@@ -422,10 +432,16 @@ impl AudioPlayer {
                     //     self.player = super::output::init_audio_player("");
                     // }
                     info!("播放已暂停！");
+
+                    if let Some(fade_handle) = self.start_fade(0.0, FADE_DURATION).await {
+                        fade_handle.await.ok();
+                    }
+
+                    let _ = self.play_task_sx.send(AudioThreadMessage::PauseAudio);
+
                     if let Some(x) = &self.media_state_manager {
                         let _ = x.set_playing(false);
                     }
-                    let _ = self.play_task_sx.send(AudioThreadMessage::PauseAudio);
                     emitter
                         .emit(AudioThreadEvent::PlayStatus { is_playing: false })
                         .await?;
@@ -435,12 +451,16 @@ impl AudioPlayer {
                     self.is_playing = !self.is_playing;
                     if self.is_playing {
                         info!("开始继续播放歌曲！");
+                        self.start_fade(self.user_volume, FADE_DURATION).await;
                         let _ = self.play_task_sx.send(AudioThreadMessage::ResumeAudio);
                         emitter
                             .emit(AudioThreadEvent::PlayStatus { is_playing: true })
                             .await?;
                     } else {
                         info!("播放已暂停！");
+                        if let Some(fade_handle) = self.start_fade(0.0, FADE_DURATION).await {
+                            fade_handle.await.ok();
+                        }
                         let _ = self.play_task_sx.send(AudioThreadMessage::PauseAudio);
                         emitter
                             .emit(AudioThreadEvent::PlayStatus { is_playing: false })
@@ -543,26 +563,35 @@ impl AudioPlayer {
                     emitter.ret(msg, status).await?;
                 }
                 AudioThreadMessage::SetVolume { volume, .. } => {
-                    self.volume = volume.clamp(0., 1.);
-                    let _ = self.player.set_volume(self.volume).await;
+                    let new_volume = volume.clamp(0.0, 1.0);
+                    self.user_volume = new_volume;
+
+                    if self.is_playing {
+                        self.start_fade(new_volume, FADE_DURATION).await;
+                    } else {
+                        self.current_volume = 0.0;
+                    }
+
                     emitter
                         .emit(AudioThreadEvent::VolumeChanged {
-                            volume: self.volume,
+                            volume: self.user_volume,
                         })
                         .await?;
-
                     emitter.ret_none(msg).await?;
                 }
                 AudioThreadMessage::SetVolumeRelative { volume, .. } => {
-                    self.volume += volume;
-                    self.volume = self.volume.clamp(0., 1.);
-                    let _ = self.player.set_volume(self.volume).await;
+                    let new_volume = (self.user_volume + volume).clamp(0.0, 1.0);
+                    self.user_volume = new_volume;
+
+                    if self.is_playing {
+                        self.start_fade(new_volume, FADE_DURATION).await;
+                    }
+
                     emitter
                         .emit(AudioThreadEvent::VolumeChanged {
-                            volume: self.volume,
+                            volume: self.user_volume,
                         })
                         .await?;
-
                     emitter.ret_none(msg).await?;
                 }
                 AudioThreadMessage::SetFFTRange {
@@ -599,7 +628,7 @@ impl AudioPlayer {
             duration: audio_info.duration,
             position: audio_info.position,
             music_info: audio_info,
-            volume: self.volume,
+            volume: self.user_volume,
             load_position: 0.,
             playlist_inited: self.playlist_inited,
             playlist: self.playlist.to_owned(),
@@ -1203,6 +1232,61 @@ impl AudioPlayer {
 
         Ok(())
     }
+
+    async fn start_fade(&mut self, target_vol: f64, duration: Duration) -> Option<JoinHandle<()>> {
+        if let Some(task) = self.fade_task.take() {
+            task.abort();
+        }
+
+        let start_vol = self.current_volume;
+        if (start_vol - target_vol).abs() < 0.01 {
+            self.current_volume = target_vol;
+            let _ = self.player.set_volume(target_vol).await;
+            return None;
+        }
+
+        let player_clone = self.player.clone();
+
+        let fade_task = tokio::spawn(async move {
+            run_volume_fade(player_clone, start_vol, target_vol, duration).await;
+        });
+
+        self.fade_task = Some(fade_task.abort_handle());
+        self.current_volume = target_vol;
+
+        Some(fade_task)
+    }
+}
+
+async fn run_volume_fade(
+    player: AudioOutputSender,
+    start_vol: f64,
+    end_vol: f64,
+    duration: Duration,
+) {
+    let start_time = Instant::now();
+    let duration_ms = duration.as_millis() as f32;
+    let mut interval = tokio::time::interval(Duration::from_millis(16));
+
+    loop {
+        interval.tick().await;
+        let elapsed = start_time.elapsed();
+
+        if elapsed >= duration {
+            break;
+        }
+
+        let current_vol = Quad::ease_out(
+            elapsed.as_millis() as f32,
+            start_vol as f32,
+            (end_vol - start_vol) as f32,
+            duration_ms,
+        ) as f64;
+
+        let _ = player.set_volume(current_vol).await;
+    }
+
+    let _ = player.set_volume(end_vol).await;
 }
 
 impl Drop for AudioPlayer {

@@ -57,7 +57,7 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         name: 克隆仓库
         with:
           fetch-depth: 0 # 为了正确生成开发版本号码
