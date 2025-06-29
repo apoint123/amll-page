@@ -34,7 +34,6 @@ import React, {
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { branch, commit } from "virtual:git-metadata-plugin";
-import resources from "virtual:i18next-loader";
 import { router } from "../../router.tsx";
 import { restartApp } from "../../utils/player.ts";
 import styles from "./index.module.css";
@@ -63,6 +62,8 @@ import {
 	lyricFontWeightAtom,
 	lyricLetterSpacingAtom,
 	lyricWordFadeWidthAtom,
+	LyricSizePreset,
+	lyricSizePresetAtom,
 	playerControlsTypeAtom,
 	showBottomControlAtom,
 	showMusicAlbumAtom,
@@ -85,6 +86,7 @@ import {
 	smtcTextConversionModeAtom,
 	enableWsLyricsInSmtcModeAtom,
 	smtcTimeOffsetAtom,
+	LyricSizePresetValue,
 } from "@applemusic-like-lyrics/states";
 
 import { fftDataRangeAtom } from "@applemusic-like-lyrics/states";
@@ -323,12 +325,12 @@ const GeneralSettings = () => {
 			}
 			return result;
 		}
-		const originalLocaleKeyNum = collectLocaleKey(resources["zh-CN"]).size;
-		const menu = Object.keys(resources)
+		const originalLocaleKeyNum = collectLocaleKey(i18n.options.resources?.["zh-CN"] ?? {}).size;
+		const menu = Object.keys(i18n.options.resources ?? {})
 			.map((langId) => {
 				return {
 					langId,
-					keyNum: collectLocaleKey(resources[langId]).size,
+					keyNum: collectLocaleKey(i18n.options.resources?.[langId] ?? {}).size,
 				};
 			})
 			.filter(({ keyNum }) => keyNum)
@@ -507,6 +509,17 @@ const LyricAppearanceSettings = () => {
 		}
 		setLyricPlayerImplValue(implementationObject);
 	};
+	const [lyricSize, setLyricSize] = useAtom(lyricSizePresetAtom);
+
+	const lyricSizeMenu = useMemo(() => [
+		{ label: t("page.settings.lyricAppearance.lyricFontSize.menu.tiny", "超小"), value: LyricSizePreset.Tiny },
+		{ label: t("page.settings.lyricAppearance.lyricFontSize.menu.extra_small", "极小"), value: LyricSizePreset.ExtraSmall },
+		{ label: t("page.settings.lyricAppearance.lyricFontSize.menu.small", "小"), value: LyricSizePreset.Small },
+		{ label: t("page.settings.lyricAppearance.lyricFontSize.menu.medium", "中"), value: LyricSizePreset.Medium },
+		{ label: t("page.settings.lyricAppearance.lyricFontSize.menu.large", "大"), value: LyricSizePreset.Large },
+		{ label: t("page.settings.lyricAppearance.lyricFontSize.menu.extra_large", "极大"), value: LyricSizePreset.ExtraLarge },
+		{ label: t("page.settings.lyricAppearance.lyricFontSize.menu.huge", "超大"), value: LyricSizePreset.Huge },
+	], [t]);
 
 	return (
 		<>
@@ -540,6 +553,30 @@ const LyricAppearanceSettings = () => {
 				</Select.Root>
 			</SettingEntry>
 			<LyricFontSetting />
+			<SettingEntry
+				label={t(
+					"page.settings.lyricAppearance.lyricFontSize.label",
+					"歌词字体大小",
+				)}
+				description={t(
+					"page.settings.lyricAppearance.lyricFontSize.descriptionResponsive",
+					"设置歌词的字体大小",
+				)}
+			>
+				<Select.Root
+					value={lyricSize}
+					onValueChange={(value) => setLyricSize(value as LyricSizePresetValue)}
+				>
+					<Select.Trigger />
+					<Select.Content>
+						{lyricSizeMenu.map((item) => (
+							<Select.Item key={item.value} value={item.value}>
+								{item.label}
+							</Select.Item>
+						))}
+					</Select.Content>
+				</Select.Root>
+			</SettingEntry>
 			<SwitchSettings
 				label={t(
 					"page.settings.lyricAppearance.enableLyricLineBlurEffect.label",

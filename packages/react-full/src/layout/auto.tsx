@@ -1,5 +1,5 @@
 import type { HTMLProps } from "react";
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 
 import { useLayoutEffect } from "react";
 import styles from "./auto.module.css";

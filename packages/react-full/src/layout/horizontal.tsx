@@ -7,6 +7,7 @@ import classnames from "classnames";
 import { motion } from "framer-motion";
 import type { HTMLProps } from "react";
 import styles from "./horizontal.module.css";
+import React from "react";
 
 export const HorizontalLayout: React.FC<
 	{
@@ -30,30 +31,30 @@ export const HorizontalLayout: React.FC<
 	asChild,
 	...rest
 }) => {
-	return (
-		<div
-			className={classnames(
-				className,
-				!asChild && styles.horizontalLayout,
-				!asChild && hideLyric && styles.hideLyric,
-			)}
-			{...rest}
-		>
-			<motion.div layout layoutId="amll-player-thumb" className={styles.thumb}>
-				{thumbSlot}
-			</motion.div>
-			<motion.div layout layoutId="amll-player-cover" className={styles.cover}>
-				{coverSlot}
-			</motion.div>
-			<motion.div
-				layout
-				layoutId="amll-player-controls"
-				className={styles.controls}
+		return (
+			<div
+				className={classnames(
+					className,
+					!asChild && styles.horizontalLayout,
+					!asChild && hideLyric && styles.hideLyric,
+				)}
+				{...rest}
 			>
-				{controlsSlot}
-			</motion.div>
-			<div className={styles.lyric}>{lyricSlot}</div>
-			<div className={styles.bottomControls}>{bottomControls}</div>
-		</div>
-	);
-};
+				<motion.div layout layoutId="amll-player-thumb" className={styles.thumb}>
+					{thumbSlot}
+				</motion.div>
+				<motion.div layout layoutId="amll-player-cover" className={styles.cover}>
+					{coverSlot}
+				</motion.div>
+				<motion.div
+					layout
+					layoutId="amll-player-controls"
+					className={styles.controls}
+				>
+					{controlsSlot}
+				</motion.div>
+				<div className={styles.lyric}>{lyricSlot}</div>
+				<div className={styles.bottomControls}>{bottomControls}</div>
+			</div>
+		);
+	};

@@ -414,7 +414,10 @@ export const onClickRightFunctionButtonAtom = atom(c(() => { }));
 // ======================== SMTC (System Media Transport Controls) 相关状态 ========================
 
 export const smtcSessionsAtom = atom<SmtcSession[]>([]);
-export const smtcSelectedSessionIdAtom = atom<string | null>(null);
+export const smtcSelectedSessionIdAtom = atomWithStorage<string | null>(
+    "amll-player.smtcSelectedSessionId",
+    null
+);
 export const audioQualityDialogOpenedAtom = atom(false);
 export const smtcTrackIdAtom = atom<string>("");
 export const smtcTextConversionModeAtom = atomWithStorage("amll-player.smtcTextConversionMode", TextConversionMode.Off);
@@ -445,9 +448,9 @@ export enum LyricPlayerImplementation {
 
 export const wsLyricOnlyModeAtom = atom<boolean>(false);
 
-export const enableWsLyricsInSmtcModeAtom = atom<boolean>(true);
+export const enableWsLyricsInSmtcModeAtom = atomWithStorage("amll-player.enableWsLyricsInSmtcMode", true);
 
-export const smtcTimeOffsetAtom = atom(0);
+export const smtcTimeOffsetAtom = atomWithStorage("amll-player.smtcTimeOffset", 0);
 
 export const correctedMusicPlayingPositionAtom = atom(
     (get) => {
@@ -525,3 +528,25 @@ export const isChechingUpdateAtom = atom(false);
 export const updateInfoAtom = atom<Update | false>(false);
 export const autoUpdateAtom = atomWithStorage("amll-player.autoUpdate", true);
 
+/**
+ * 定义歌词大小的预设值
+ */
+export const LyricSizePreset = {
+  Tiny: 'tiny',
+  ExtraSmall: 'extra-small',
+  Small: 'small',
+  Medium: 'medium',
+  Large: 'large',
+  ExtraLarge: 'extra-large',
+  Huge: 'huge',
+} as const;
+
+export type LyricSizePresetValue = typeof LyricSizePreset[keyof typeof LyricSizePreset];
+
+/**
+ * 歌词字体大小的预设选项，默认为“中”
+ */
+export const lyricSizePresetAtom = atomWithStorage<LyricSizePresetValue>(
+    "amll-player.lyricSizePreset",
+    LyricSizePreset.Medium
+);

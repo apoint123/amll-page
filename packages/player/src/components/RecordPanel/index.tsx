@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import styles from "./index.module.css";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
 import { isLyricPageOpenedAtom } from "@applemusic-like-lyrics/states";
 import { CameraIcon, Cross1Icon, StopIcon } from "@radix-ui/react-icons";
@@ -53,8 +53,8 @@ export const RecordPanel = () => {
 						max: 120,
 					},
 					cursor: "never",
+					displaySurface: "browser",
 				},
-				preferCurrentTab: true,
 			});
 			const [track] = media.getVideoTracks();
 			await track.restrictTo(restricter);
@@ -103,7 +103,10 @@ export const RecordPanel = () => {
 								const [track] = mediaStream.getVideoTracks();
 
 								// 让鼠标脱离当前页面，避免截图时被截取到
-								document.activeElement?.blur();
+								const activeEl = document.activeElement;
+								if (activeEl instanceof HTMLElement) {
+									activeEl.blur();
+								}
 								const cp = new ImageCapture(track);
 								const photo: ImageBitmap = await cp.grabFrame();
 								const canvas = document.createElement("canvas");
@@ -116,6 +119,10 @@ export const RecordPanel = () => {
 								}
 								ctx.transferFromImageBitmap(photo);
 								canvas.toBlob((blob) => {
+									if (!blob) {
+										toast.error("无法从画布创建图片数据。");
+										return;
+									}
 									navigator.clipboard
 										.write([
 											new ClipboardItem({
@@ -164,8 +171,8 @@ export const RecordPanel = () => {
 								mediaRecorder === undefined
 									? {}
 									: {
-											backgroundColor: "var(--red-9)",
-										}
+										backgroundColor: "var(--red-9)",
+									}
 							}
 						>
 							{mediaRecorder === undefined && (

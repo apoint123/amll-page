@@ -3,6 +3,14 @@
  * 合并调用 requestAnimationFrame 的函数减少原生调用开销
  */
 
+declare global {
+  interface Window {
+    manualRafEnable: () => void;
+    manualRafDisable: () => void;
+    manualRafStep: (stepTime: number) => void;
+  }
+}
+
 const origRaf = window.requestAnimationFrame;
 const origCaf = window.cancelAnimationFrame;
 
@@ -79,3 +87,5 @@ window.cancelAnimationFrame = (handle) => {
 		}
 	}
 };
+
+export {};

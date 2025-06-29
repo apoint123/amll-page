@@ -98,7 +98,7 @@ const PlaylistSongItem: FC<
 export const NowPlaylistCard: FC<FlexProps> = (props) => {
 	const playlist = useAtomValue(currentPlaylistAtom);
 	const playlistIndex = useAtomValue(currentPlaylistMusicIndexAtom);
-	const playlistRef = useRef<ViewportListRef>();
+	const playlistRef = useRef<ViewportListRef>(null);
 	const playlistContainerRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {

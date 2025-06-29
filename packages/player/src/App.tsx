@@ -44,6 +44,9 @@ import {
 	audioQualityDialogOpenedAtom,
 
 	onClickAudioQualityTagAtom,
+
+	lyricSizePresetAtom,
+	LyricSizePreset
 } from "@applemusic-like-lyrics/states";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -66,6 +69,8 @@ function App() {
 
 	const setWsLyricOnlyMode = useSetAtom(wsLyricOnlyModeAtom);
 	const enableWsLyrics = useAtomValue(enableWsLyricsInSmtcModeAtom);
+
+	const lyricSize = useAtomValue(lyricSizePresetAtom);
 
 	useEffect(() => {
 		const isSmtcAndWsEnabled =
@@ -140,6 +145,50 @@ function App() {
 			},
 		});
 	}, [store]);
+
+	useEffect(() => {
+		let fontSizeFormula = '';
+		switch (lyricSize) {
+			case LyricSizePreset.Tiny:
+				fontSizeFormula = 'max(max(2.5vh, 1.25vw), 10px)';
+				break;
+			case LyricSizePreset.ExtraSmall:
+				fontSizeFormula = 'max(max(3vh, 1.5vw), 10px)';
+				break;
+			case LyricSizePreset.Small:
+				fontSizeFormula = 'max(max(4vh, 2vw), 12px)';
+				break;
+			case LyricSizePreset.Large:
+				fontSizeFormula = 'max(max(6vh, 3vw), 16px)';
+				break;
+			case LyricSizePreset.ExtraLarge:
+				fontSizeFormula = 'max(max(7vh, 3.5vw), 18px)';
+				break;
+			case LyricSizePreset.Huge:
+				fontSizeFormula = 'max(max(8vh, 4vw), 20px)';
+				break;
+			case LyricSizePreset.Medium:
+			default:
+				fontSizeFormula = 'max(max(5vh, 2.5vw), 14px)';
+				break;
+		}
+
+		const styleId = 'amll-font-size-style';
+		let styleTag = document.getElementById(styleId);
+
+		if (!styleTag) {
+			styleTag = document.createElement('style');
+			styleTag.id = styleId;
+			document.head.appendChild(styleTag);
+		}
+
+		styleTag.innerHTML = `
+            .amll-lyric-player {
+                font-size: ${fontSizeFormula} !important;
+            }
+        `;
+
+	}, [lyricSize]);
 
 	// 渲染逻辑
 	return (

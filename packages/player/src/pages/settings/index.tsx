@@ -53,7 +53,7 @@ const SidebarButton: FC<{
 	return (
 		<Button
 			variant="soft"
-			color={isActive ? "accent" : "gray"}
+			color={isActive ? ("accent" as any) : "gray"}
 			onClick={onClick}
 			style={{ justifyContent: "flex-start", cursor: "pointer" }}
 			size="3"
@@ -72,7 +72,7 @@ export const Component: FC = () => {
 	const os = usePlatform();
 	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
 	const loadedExtensions = useAtomValue(loadedExtensionsWithSettingsAtom);
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 
 	const playerSettingsPages = useMemo(() => {
 		const pages = [
@@ -198,7 +198,7 @@ export const Component: FC = () => {
 								<SidebarButton
 									key={`extension.${id}`}
 									icon={<img src={String(extension.context.extensionMeta.icon)} width="20" height="20" />}
-									label={t("name", id, { ns: id })}
+									label={i18n.getFixedT(null, id as any)("name", id)}
 									isActive={currentPage === `extension.${id}`}
 									onClick={() => setCurrentPage(`extension.${id}`)}
 								/>

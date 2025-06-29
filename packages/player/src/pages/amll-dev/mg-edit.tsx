@@ -1,5 +1,5 @@
 import { MeshGradientRenderer } from "@applemusic-like-lyrics/core";
-import { musicCoverAtom } from "@applemusic-like-lyrics/react-full";
+import { musicCoverAtom } from "@applemusic-like-lyrics/states";
 import { ArrowLeftIcon, CodeIcon } from "@radix-ui/react-icons";
 import {
 	Card,
@@ -61,7 +61,7 @@ const ControlPointHandle: FC<{
 						left: `${(point.x + 1) * 50}%`,
 						top: `${(1 - point.y) * 50}%`,
 					}}
-					cp={`${point.cpX}-${point.cpY}`}
+					data-cp={`${point.cpX}-${point.cpY}`}
 					onMouseDown={(e) => {
 						e.stopPropagation();
 						function checkPos(evt: MouseEvent) {
@@ -273,7 +273,7 @@ const CodeButton: FC<{
 		// }
 		// result.push("]),");
 		// return result.join("\n");
-		const result = [controlPointSize, controlPointSize];
+		const result: (number | number[])[] = [controlPointSize, controlPointSize];
 		for (let y = 0; y < controlPointSize; y++) {
 			for (let x = 0; x < controlPointSize; x++) {
 				const point = controlPoints[y * controlPointSize + x];
@@ -317,7 +317,7 @@ const CodeButton: FC<{
 export const Component: FC = () => {
 	useHideNowPlayingBar();
 	const frameRef = useRef<HTMLDivElement>(null);
-	const mgRenderer = useRef<MeshGradientRenderer>();
+	const mgRenderer = useRef<MeshGradientRenderer | null>(null);
 	const cover = useAtomValue(musicCoverAtom);
 	const [controlPointSize, setControlPointSize] = useState(4);
 	const [controlPoints, setControlPoints] = useState<ControlPointHandleState[]>(
@@ -369,24 +369,24 @@ export const Component: FC = () => {
 		mgRenderer.current = newRenderer;
 		return () => {
 			newRenderer.dispose();
-			mgRenderer.current = undefined;
+			mgRenderer.current = null;
 		};
 	}, []);
 
 	useEffect(() => {
 		const mgRendererInstance = mgRenderer.current;
-		if (mgRendererInstance === undefined) return;
+		if (!mgRendererInstance) return;
 		try {
 			mgRendererInstance.setAlbum(cover);
-		} catch {}
+		} catch { }
 	}, [cover]);
 
 	useEffect(() => {
 		const mgRendererInstance = mgRenderer.current;
-		if (mgRendererInstance === undefined) return;
+		if (!mgRendererInstance) return;
 		try {
 			mgRendererInstance.setWireFrame(wireframe);
-		} catch {}
+		} catch { }
 	}, [wireframe]);
 
 	useEffect(() => {
