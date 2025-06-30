@@ -717,3 +717,5 @@ export const lyricSizePresetAtom = atomWithStorage<LyricSizePresetValue>(
 	"amll-player.lyricSizePreset",
 	LyricSizePreset.Medium,
 );
+
+export const showRemainingTimeAtom = atomWithStorage("showRemainingTime", true);

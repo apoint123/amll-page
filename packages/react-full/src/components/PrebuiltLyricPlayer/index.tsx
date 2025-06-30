@@ -15,6 +15,7 @@ import structuredClone from "@ungap/structured-clone";
 import {
 	type FC,
 	type HTMLProps,
+	useEffect,
 	useLayoutEffect,
 	useMemo,
 	useRef,
@@ -44,7 +45,6 @@ import {
 	musicLyricLinesAtom,
 	musicNameAtom,
 	musicPlayingAtom,
-	musicPlayingPositionAtom,
 	correctedMusicPlayingPositionAtom,
 	musicQualityTagAtom,
 	musicVolumeAtom,
@@ -79,6 +79,7 @@ import {
 	RepeatMode,
 	smtcRepeatModeAtom,
 	smtcShuffleStateAtom,
+	showRemainingTimeAtom,
 } from "@applemusic-like-lyrics/states";
 
 import { toDuration } from "../../utils";
@@ -121,10 +122,23 @@ const PrebuiltMusicInfo: FC<{
 	const showMusicName = useAtomValue(showMusicNameAtom);
 	const showMusicArtists = useAtomValue(showMusicArtistsAtom);
 	const showMusicAlbum = useAtomValue(showMusicAlbumAtom);
+	const fontFamily = useAtomValue(lyricFontFamilyAtom);
+	const fontWeight = useAtomValue(lyricFontWeightAtom);
+	const letterSpacing = useAtomValue(lyricLetterSpacingAtom);
+	const combinedStyle = useMemo(
+		() => ({
+			...style,
+			fontFamily: fontFamily || undefined,
+			fontWeight: fontWeight || undefined,
+			letterSpacing: letterSpacing || undefined,
+		}),
+		[style, fontFamily, fontWeight, letterSpacing],
+	);
+
 	return (
 		<MusicInfo
 			className={className}
-			style={style}
+			style={combinedStyle}
 			name={showMusicName ? musicName : undefined}
 			artists={showMusicArtists ? musicArtists.map((v) => v.name) : undefined}
 			album={showMusicAlbum ? musicAlbum : undefined}
@@ -219,14 +233,27 @@ const PrebuiltMediaButtons: FC<{
 const PrebuiltProgressBar: FC<{ disabled?: boolean }> = React.memo(
 	({ disabled }) => {
 		const musicDuration = useAtomValue(musicDurationAtom);
-
 		const musicPosition = useAtomValue(correctedMusicPlayingPositionAtom);
-
 		const musicQualityTag = useAtomValue(musicQualityTagAtom);
 		const onClickAudioQualityTag = useAtomValue(
 			onClickAudioQualityTagAtom,
 		).onEmit;
 		const onSeekPosition = useAtomValue(onSeekPositionAtom).onEmit;
+
+		const [showRemaining, setShowRemaining] = useAtom(showRemainingTimeAtom);
+
+		const fontFamily = useAtomValue(lyricFontFamilyAtom);
+		const fontWeight = useAtomValue(lyricFontWeightAtom);
+		const letterSpacing = useAtomValue(lyricLetterSpacingAtom);
+
+		const fontStyle = useMemo(
+			() => ({
+				fontFamily: fontFamily || undefined,
+				fontWeight: fontWeight || undefined,
+				letterSpacing: letterSpacing || undefined,
+			}),
+			[fontFamily, fontWeight, letterSpacing],
+		);
 
 		const throttledSeek = useThrottle((position: number) => {
 			onSeekPosition?.(position);
@@ -241,6 +268,11 @@ const PrebuiltProgressBar: FC<{ disabled?: boolean }> = React.memo(
 			return <>{toDuration(time)}</>;
 		};
 
+		const TotalDurationLabel: FC = () => {
+			const duration = useAtomValue(musicDurationAtom);
+			return <>{toDuration(duration / 1000)}</>;
+		};
+
 		return (
 			<div>
 				<BouncingSlider
@@ -251,7 +283,7 @@ const PrebuiltProgressBar: FC<{ disabled?: boolean }> = React.memo(
 					disabled={disabled}
 				/>
 				<div className={styles.progressBarLabels}>
-					<div>
+					<div style={fontStyle}>
 						<TimeLabel />
 					</div>
 					<div>
@@ -267,8 +299,11 @@ const PrebuiltProgressBar: FC<{ disabled?: boolean }> = React.memo(
 							)}
 						</AnimatePresence>
 					</div>
-					<div>
-						<TimeLabel isRemaining />
+					<div
+						style={{ ...fontStyle, cursor: "pointer", userSelect: "none" }}
+						onClick={() => setShowRemaining(!showRemaining)}
+					>
+						{showRemaining ? <TimeLabel isRemaining /> : <TotalDurationLabel />}
 					</div>
 				</div>
 			</div>
@@ -452,6 +487,9 @@ export const PrebuiltLyricPlayer: FC<HTMLProps<HTMLDivElement>> = ({
 	const backgroundRenderer = useAtomValue(lyricBackgroundRendererAtom);
 	const showBottomControl = useAtomValue(showBottomControlAtom);
 
+	const [isHoveringTitlebar, setIsHoveringTitlebar] = useState(false);
+	const [isGracePeriodOver, setIsGracePeriodOver] = useState(false);
+
 	useLayoutEffect(() => {
 		// 如果是水平布局，则让歌词对齐到封面的中心
 		if (!isVertical && coverElRef.current && layoutRef.current) {
@@ -474,6 +512,51 @@ export const PrebuiltLyricPlayer: FC<HTMLProps<HTMLDivElement>> = ({
 			setAlignAnchor("top");
 		}
 	}, [isVertical]);
+
+	useEffect(() => {
+		if (isLyricPageOpened) {
+			setIsGracePeriodOver(false);
+			const timerId = setTimeout(() => {
+				setIsGracePeriodOver(true);
+			}, 5000);
+			return () => clearTimeout(timerId);
+		}
+	}, [isLyricPageOpened]);
+
+
+	useEffect(() => {
+		const titlebarArea = document.getElementById("system-titlebar");
+		if (!titlebarArea) return;
+
+		const handleMouseEnter = () => setIsHoveringTitlebar(true);
+		const handleMouseLeave = () => setIsHoveringTitlebar(false);
+
+		if (isLyricPageOpened) {
+			titlebarArea.addEventListener('mouseenter', handleMouseEnter);
+			titlebarArea.addEventListener('mouseleave', handleMouseLeave);
+		} else {
+            setIsHoveringTitlebar(false);
+        }
+
+		return () => {
+			titlebarArea.removeEventListener('mouseenter', handleMouseEnter);
+			titlebarArea.removeEventListener('mouseleave', handleMouseLeave);
+		};
+	}, [isLyricPageOpened]);
+
+
+	useEffect(() => {
+		const titlebarButtons = document.getElementById("system-titlebar-buttons");
+		if (!titlebarButtons) return;
+
+		titlebarButtons.style.transition = "opacity 0.3s ease-in-out, pointer-events 0.3s";
+		
+		const shouldBeVisible = !isLyricPageOpened || isHoveringTitlebar || !isGracePeriodOver;
+
+		titlebarButtons.style.opacity = shouldBeVisible ? "1" : "0";
+		titlebarButtons.style.pointerEvents = shouldBeVisible ? "auto" : "none";
+
+	}, [isLyricPageOpened, isHoveringTitlebar, isGracePeriodOver]);
 
 	const verticalImmerseCover =
 		hideLyricView &&
