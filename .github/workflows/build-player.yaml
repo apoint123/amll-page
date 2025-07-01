@@ -84,6 +84,7 @@ jobs:
         run: |
           echo "RUSTC_WRAPPER=${{ env.SCCACHE_PATH }}" >> $GITHUB_ENV
           echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "SCCACHE_LOG=trace" >> $GITHUB_ENV
           echo "ACTIONS_CACHE_URL=${{ env.ACTIONS_CACHE_URL }}" >> $GITHUB_ENV
           echo "ACTIONS_RUNTIME_TOKEN=${{ env.ACTIONS_RUNTIME_TOKEN }}" >> $GITHUB_ENV
         shell: bash
@@ -165,10 +166,16 @@ jobs:
           version: 'v0.13.1'
       - name: 安装 wasm32 目标
         run: rustup target add wasm32-unknown-unknown
-      - name: 缓存 Cargo 产物
-        uses: Swatinem/rust-cache@v2
-        with:
-          save-if: ${{ github.ref == 'refs/heads/full-refractor' || github.ref == 'refs/heads/dev' }}
+      - name: 安装 sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+      - name: 配置 sccache
+        run: |
+          echo "RUSTC_WRAPPER=${{ env.SCCACHE_PATH }}" >> $GITHUB_ENV
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "SCCACHE_LOG=trace" >> $GITHUB_ENV
+          echo "ACTIONS_CACHE_URL=${{ env.ACTIONS_CACHE_URL }}" >> $GITHUB_ENV
+          echo "ACTIONS_RUNTIME_TOKEN=${{ env.ACTIONS_RUNTIME_TOKEN }}" >> $GITHUB_ENV
+        shell: bash
       - name: 构建 AMLL Full React 包
         run: |
           pnpm i --frozen-lockfile --ignore-scripts
@@ -182,9 +189,11 @@ jobs:
         env:
           CARGO_NDK_ANDROID_PLATFORM: 26
         run: |
+          sccache --show-stats
           export NDK_HOME=$ANDROID_NDK_HOME
           export JAVA_HOME=$JAVA_HOME_17_X64
           pnpm -F player tauri android build --split-per-abi
+          sccache --show-stats
       - name: 上传产物到 Action Artifact
         uses: actions/upload-artifact@v4
         with:
