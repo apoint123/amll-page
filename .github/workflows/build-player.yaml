@@ -62,10 +62,16 @@ jobs:
         name: 克隆仓库
         with:
           fetch-depth: 0 # 为了正确生成开发版本号码
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: |
+            ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || (matrix.platform == 'windows-latest' && matrix.arch == 'aarch64') && 'aarch64-pc-windows-msvc' || '' }}
+            
       - name: 缓存 Cargo 产物
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "monorepo-cargo-cache-${{ runner.os }}-${{ matrix.arch }}"
+          save-if: ${{ github.ref == 'refs/heads/full-refractor' || github.ref == 'refs/heads/dev' }}
 
       - name: 安装 PNPM
         uses: pnpm/action-setup@v4
@@ -74,11 +80,6 @@ jobs:
         with:
           node-version: lts/*
           cache: pnpm
-      - name: 安装 Rust 工具链
-        uses: dtolnay/rust-toolchain@1.88.0
-        with:
-          targets: |
-            ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || (matrix.platform == 'windows-latest' && matrix.arch == 'aarch64') && 'aarch64-pc-windows-msvc' || '' }}
       - name: 安装 wasm32 目标
         run: rustup target add wasm32-unknown-unknown
       # macOS 自带的 Xcode LLVM 不支持 WASM 目标
@@ -146,7 +147,7 @@ jobs:
       - name: 缓存 Cargo 产物
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "monorepo-cargo-cache-${{ runner.os }}-${{ matrix.arch }}"
+          save-if: ${{ github.ref == 'refs/heads/full-refractor' || github.ref == 'refs/heads/dev' }}
 
       - name: 安装 PNPM
         uses: pnpm/action-setup@v4
