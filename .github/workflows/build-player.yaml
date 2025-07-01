@@ -73,7 +73,7 @@ jobs:
           node-version: lts/*
           cache: pnpm
       - name: 安装 Rust 工具链
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.88.0
         with:
           targets: |
             ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || (matrix.platform == 'windows-latest' && matrix.arch == 'aarch64') && 'aarch64-pc-windows-msvc' || '' }}
@@ -137,7 +137,7 @@ jobs:
 
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         name: 克隆仓库
         with:
           fetch-depth: 0 # 为了正确生成开发版本号码
@@ -152,7 +152,7 @@ jobs:
           node-version: lts/*
           cache: pnpm
       - name: 安装 Rust 工具链
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.88.0
         with:
           targets: "x86_64-unknown-linux-gnu,x86_64-linux-android,i686-linux-android,aarch64-linux-android,arm-linux-androideabi,armv7-linux-androideabi,thumbv7neon-linux-androideabi"
       - name: 安装 wasm-pack
