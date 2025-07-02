@@ -246,10 +246,10 @@ export const SystemListenerMusicContext: FC = () => {
 							break;
 						case "audioData": {
 							if (fftPlayer) {
-								fftPlayer.pushDataI16(
+								fftPlayer.pushDataF32(
 									48000,
 									2,
-									new Int16Array(new Uint8Array(data).buffer),
+									new Float32Array(new Uint8Array(data).buffer),
 								);
 							}
 							break;
