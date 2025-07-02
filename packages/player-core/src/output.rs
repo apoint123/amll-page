@@ -5,6 +5,7 @@ use std::{
         Arc,
         atomic::{AtomicBool, AtomicU8},
     },
+    thread,
     time::Duration,
 };
 
@@ -294,6 +295,10 @@ pub fn init_audio_player(
         output.name().unwrap_or_default()
     );
 
+    if output.name().is_err() {
+        return Err(anyhow::anyhow!("获取到的默认设备无效"));
+    }
+
     let supported_configs = output
         .supported_output_configs()
         .context("无法获取输出配置")?
@@ -472,29 +477,6 @@ pub fn create_audio_output_thread() -> AudioOutputSender {
     let (tx, mut msg_rx) = tokio::sync::mpsc::channel::<AudioOutputMessage>(128);
     let handle = tokio::runtime::Handle::current();
 
-    let poll_default_tx = tx.clone();
-    // 通过轮询检测是否需要重新创建音频输出设备流
-    // TODO: 如果 CPAL 支持依照系统默认输出自动更新输出流，那么这段代码就可以删掉了（https://github.com/RustAudio/cpal/issues/740）
-    handle.spawn(async move {
-        let host = cpal::default_host();
-        let get_device_name = || {
-            host.default_output_device()
-                .map(|x| x.name().unwrap_or_default())
-                .unwrap_or_default()
-        };
-        let mut cur_device_name = get_device_name();
-        loop {
-            tokio::time::sleep(Duration::from_secs(1)).await;
-            let mut def_device_name = get_device_name();
-            if cur_device_name != def_device_name {
-                cur_device_name = def_device_name;
-                info!("默认输出设备发生改变，正在尝试重新创建输出设备");
-                poll_default_tx
-                    .send(AudioOutputMessage::ChangeOutput("".into()))
-                    .await;
-            }
-        }
-    });
     let handle_c = handle.clone();
     handle.spawn_blocking(move || {
         let mut output_name = "".to_string();
@@ -569,12 +551,18 @@ pub fn create_audio_output_thread() -> AudioOutputSender {
                         } else {
                             out.write(pcm.as_audio_buffer_ref());
                         }
+                    } else {
+                        should_recreate = true;
                     }
+
                     if should_recreate {
+                        thread::sleep(Duration::from_millis(500));
                         output = init_audio_player("", None).ok();
                         if let Some(out) = &mut output {
                             out.set_volume(current_volume);
                             out.stream().play().unwrap();
+                        } else {
+                            warn!("重新初始化播放器失败");
                         }
                     }
                 }

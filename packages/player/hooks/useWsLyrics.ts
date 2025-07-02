@@ -50,7 +50,7 @@ export const useWsLyrics = (isEnabled: boolean) => {
 			}
 
 			const DEFAULT_ADVANCE_MS = 400;
-			const COMPROMISE_ADVANCE_MS = 300;
+			const COMPROMISE_ADVANCE_MS = 200;
 			const INTERVAL_MS = 400;
 
 			const originalLines = JSON.parse(JSON.stringify(lines));
@@ -60,10 +60,14 @@ export const useWsLyrics = (isEnabled: boolean) => {
 				let advanceAmount = DEFAULT_ADVANCE_MS;
 
 				if (i > 0) {
-					const interval =
-						originalLines[i].startTime - originalLines[i - 1].endTime;
-					if (interval < INTERVAL_MS) {
-						advanceAmount = COMPROMISE_ADVANCE_MS;
+					const prevLineEndTime = originalLines[i - 1].endTime;
+					const currentLineStartTime = originalLines[i].startTime;
+
+					if (currentLineStartTime > prevLineEndTime) {
+						const interval = currentLineStartTime - prevLineEndTime;
+						if (interval < INTERVAL_MS) {
+							advanceAmount = COMPROMISE_ADVANCE_MS;
+						}
 					}
 				}
 
@@ -77,10 +81,18 @@ export const useWsLyrics = (isEnabled: boolean) => {
 				newLines[i].endTime = originalLines[i].endTime;
 
 				if (i < newLines.length - 1) {
-					newLines[i].endTime = Math.min(
-						newLines[i].endTime,
-						newLines[i + 1].startTime,
-					);
+					const currentOriginalLine = originalLines[i];
+					const nextOriginalLine = originalLines[i + 1];
+					const nextLineAdvancedStartTime = newLines[i + 1].startTime;
+
+					const wasSequential =
+						currentOriginalLine.endTime <= nextOriginalLine.startTime;
+
+					if (wasSequential) {
+						if (newLines[i].endTime > nextLineAdvancedStartTime) {
+							newLines[i].endTime = nextLineAdvancedStartTime;
+						}
+					}
 				}
 
 				if (newLines[i].endTime < newLines[i].startTime) {
