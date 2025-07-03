@@ -9,7 +9,7 @@ mod audio_quality;
 mod fft_player;
 mod media_state;
 pub mod output;
-mod player;
+pub mod player;
 mod resampler;
 pub mod utils;
 

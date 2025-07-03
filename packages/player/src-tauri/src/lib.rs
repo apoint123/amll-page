@@ -14,6 +14,8 @@ use tokio::sync::RwLock;
 use tracing::*;
 
 use amll_player_core::output::{StreamHandle, init_audio_player};
+use crate::player::init_local_player;
+
 
 #[cfg(target_os = "macos")]
 use objc2::rc::autoreleasepool;
@@ -29,6 +31,7 @@ mod external_media_controller;
 
 #[derive(Debug)]
 struct SetupError(String);
+
 
 impl std::fmt::Display for SetupError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -371,11 +374,12 @@ pub fn run() {
             reset_window_theme,
         ])
         .setup(move |app| {
+            let app_handle = app.handle().clone();
             #[cfg(target_os = "macos")]
             autoreleasepool(|_| {
                 info!("正在激活 AVAudioSession...");
                 let session = unsafe { AVAudioSession::sharedInstance() };
-
+                
                 if let Some(category) = unsafe { AVAudioSessionCategoryPlayback } {
                     if let Err(e) = unsafe { session.setCategory_error(category) } {
                         error!("设置 AVAudioSession 类别失败：{:?}", e);
@@ -390,40 +394,44 @@ pub fn run() {
                 info!("AVAudioSession 已激活。");
             });
 
-            let (stream_handle, output_instance) = match init_audio_player("", None) {
-                Ok((handle, instance)) => (handle, instance),
+            let result = init_audio_player("", None);
+            
+            match result {
+                Ok((stream_handle, output_instance)) => {
+                    info!("音频设备成功初始化。");
+                    
+                    let _ = Box::leak(Box::new(stream_handle));
+                    
+                    init_local_player(app_handle.clone(), output_instance);
+                },
                 Err(e) => {
-                    let err_msg = format!("音频初始化失败：{}", e);
-                    error!("{}", err_msg);
-                    return Err(Box::new(SetupError(err_msg)));
+                    error!("音频初始化失败：{}", e);
                 }
             };
-
-            let _keep_stream_alive = stream_handle;
-
-            player::init_local_player(app.handle().clone(), output_instance);
 
             #[cfg(target_os = "windows")]
             {
                 info!("正在初始化外部媒体控制器...");
                 let controller_state =
                     external_media_controller::start_listener(app.handle().clone());
-                app.manage(controller_state);
+                app_handle.manage(controller_state);
             }
 
             #[cfg(desktop)]
             let _ = app
                 .handle()
                 .plugin(tauri_plugin_global_shortcut::Builder::new().build());
-            app.manage::<AMLLWebSocketServerWrapper>(RwLock::new(AMLLWebSocketServer::new(
-                app.handle().clone(),
+            app_handle.manage::<AMLLWebSocketServerWrapper>(RwLock::new(AMLLWebSocketServer::new(
+                app_handle.clone(),
             )));
             #[cfg(not(mobile))]
             {
-                tauri::async_runtime::block_on(recreate_window(app.handle(), "main", None));
+                tauri::async_runtime::block_on(recreate_window(&app_handle, "main", None));
             }
             Ok(())
         })
         .run(context)
         .expect("error while running tauri application");
 }
+
+
