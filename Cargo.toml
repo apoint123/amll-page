@@ -5,9 +5,8 @@ members = [
     "./packages/fft",
     "./packages/ws-protocol",
     "./packages/player-core",
-    "./packages/player/src-tauri",
 ]
-exclude = ["./packages/skia-player"]
+exclude = ["./packages/player/src-tauri", "./packages/skia-player"]
 
 [profile.dev]
 opt-level = 1
