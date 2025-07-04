@@ -256,9 +256,10 @@ fn init_logging() {
                 .init();
         }
     }
-    #[cfg(debug_assertions)] {
+    #[cfg(debug_assertions)]
+    {
         tracing_subscriber::fmt()
-            .with_env_filter("amll_player=trace,wry=info")
+            .with_env_filter("amll_player=trace,smtc_suite=debug,wry=info")
             .with_thread_names(true)
             .with_timer(tracing_subscriber::fmt::time::uptime())
             .init();
@@ -309,6 +310,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![
             ws_reopen_connection,
             ws_get_connections,

@@ -15,7 +15,7 @@ pub async fn local_player_send_msg(msg: AudioThreadEventMessage<AudioThreadMessa
 }
 
 async fn local_player_main<R: Runtime>(manager: impl Manager<R> + Clone + Send + Sync + 'static) {
-    let player = AudioPlayer::new(AudioPlayerConfig {});
+    let mut player = AudioPlayer::new(AudioPlayerConfig {});
     let handler = player.handler();
     PLAYER_HANDLER.write().await.replace(handler);
 

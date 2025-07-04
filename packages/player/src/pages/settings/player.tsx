@@ -1242,6 +1242,13 @@ const SmtcSettings = () => {
 	const handleSessionChange = (value: string) => {
 		const finalValue = value === "null" ? null : value;
 		setSelectedSession(finalValue);
+
+		if (finalValue) {
+			localStorage.setItem("saved_smtc_session_id", finalValue);
+		} else {
+			localStorage.removeItem("saved_smtc_session_id");
+		}
+
 		invoke("control_external_media", {
 			payload: { type: "selectSession", session_id: finalValue ?? "" },
 		}).catch((err) => {

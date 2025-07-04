@@ -2,7 +2,7 @@ import { FFTPlayer } from "@applemusic-like-lyrics/fft";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAtomValue, useSetAtom, useStore } from "jotai";
-import { type FC, useEffect } from "react";
+import { type FC, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { FFTToLowPassContext } from "../LocalMusicContext/index.tsx";
@@ -24,9 +24,9 @@ import {
 	musicAlbumNameAtom,
 	musicDurationAtom,
 	musicPlayingPositionAtom,
-	musicCoverHashAtom,
 	musicCoverAtom,
 	musicVolumeAtom,
+	fftDataRangeAtom,
 } from "@applemusic-like-lyrics/react-full";
 import {
 	musicContextModeAtom,
@@ -80,6 +80,30 @@ export const SystemListenerMusicContext: FC = () => {
 	const musicContextMode = useAtomValue(musicContextModeAtom);
 	const isWsLyricsEnabled = useAtomValue(enableWsLyricsInSmtcModeAtom);
 	const setIsLyricPageOpened = useSetAtom(isLyricPageOpenedAtom);
+
+	const fftPlayer = useRef<FFTPlayer | undefined>(undefined);
+	const fftDataRange = useAtomValue(fftDataRangeAtom);
+
+	useEffect(() => {
+		const fft = new FFTPlayer();
+		fft.setFreqRange(fftDataRange[0], fftDataRange[1]);
+		fftPlayer.current = fft;
+		const result = new Float32Array(64);
+		let animationFrameId: number;
+
+		const onFFTFrame = () => {
+			fftPlayer.current?.read(result);
+			store.set(fftDataAtom, [...result]);
+			animationFrameId = requestAnimationFrame(onFFTFrame);
+		};
+		animationFrameId = requestAnimationFrame(onFFTFrame);
+
+		return () => {
+			cancelAnimationFrame(animationFrameId);
+			fftPlayer.current?.free();
+			fftPlayer.current = undefined;
+		};
+	}, [fftDataRange, store]);
 
 	useWsLyrics(isWsLyricsEnabled);
 
@@ -165,18 +189,7 @@ export const SystemListenerMusicContext: FC = () => {
 			return;
 		}
 
-		const fftPlayer = new FFTPlayer();
-		const fftResult = new Float32Array(64);
-		let animationFrameId: number;
-
 		let unlistenFunction: (() => void) | null = null;
-
-		const onFFTFrame = () => {
-			fftPlayer.read(fftResult);
-			store.set(fftDataAtom, [...fftResult]);
-			animationFrameId = requestAnimationFrame(onFFTFrame);
-		};
-		animationFrameId = requestAnimationFrame(onFFTFrame);
 
 		const setupAsync = async () => {
 			try {
@@ -211,11 +224,7 @@ export const SystemListenerMusicContext: FC = () => {
 							);
 
 							if (newTrackInfo.coverDataHash != null) {
-								const currentCoverHash = store.get(musicCoverHashAtom);
-								const newCoverHash = newTrackInfo.coverDataHash;
-
-								if (newCoverHash !== currentCoverHash) {
-									store.set(musicCoverHashAtom, newCoverHash);
+								if ("coverData" in newTrackInfo) {
 									if (newTrackInfo.coverData) {
 										store.set(
 											musicCoverAtom,
@@ -245,8 +254,8 @@ export const SystemListenerMusicContext: FC = () => {
 							toast.error(t("amll.systemListener.error", { error: data }));
 							break;
 						case "audioData": {
-							if (fftPlayer) {
-								fftPlayer.pushDataF32(
+							if (fftPlayer.current) {
+								fftPlayer.current.pushDataF32(
 									48000,
 									2,
 									new Float32Array(new Uint8Array(data).buffer),
@@ -260,6 +269,17 @@ export const SystemListenerMusicContext: FC = () => {
 				unlistenFunction = unlisten;
 
 				await invoke("request_smtc_update");
+
+				const savedSessionId = localStorage.getItem("saved_smtc_session_id");
+				if (savedSessionId) {
+					console.log(`恢复之前选择的会话: ${savedSessionId}`);
+					await invoke("control_external_media", {
+						payload: { type: "selectSession", session_id: savedSessionId },
+					}).catch((err) => {
+						console.warn(`恢复之前选择的会话 ${savedSessionId} 失败:`, err);
+					});
+				}
+
 				await invoke("control_external_media", {
 					payload: { type: "startAudioVisualization" },
 				});
@@ -276,8 +296,6 @@ export const SystemListenerMusicContext: FC = () => {
 				unlistenFunction();
 			}
 
-			cancelAnimationFrame(animationFrameId);
-			fftPlayer.free();
 			invoke("control_external_media", {
 				payload: { type: "stopAudioVisualization" },
 			});
