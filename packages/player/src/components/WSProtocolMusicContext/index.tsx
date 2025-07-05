@@ -344,17 +344,33 @@ export const WSProtocolMusicContext: FC<WSProtocolMusicContextProps> = ({
 		});
 		return () => {
 			unlistenConnected.then((u) => u());
-			// unlistenBody.then((u) => u());
 			unlistenDisconnected.then((u) => u());
+
 			invoke("ws_close_connection");
+
 			const doNothing = { onEmit: () => { } };
+			store.set(onRequestNextSongAtom, doNothing);
+			store.set(onRequestPrevSongAtom, doNothing);
+			store.set(onPlayOrResumeAtom, doNothing);
+			store.set(onSeekPositionAtom, doNothing);
+			store.set(onLyricLineClickAtom, doNothing);
+			store.set(onChangeVolumeAtom, doNothing);
 			store.set(onClickControlThumbAtom, doNothing);
 
 			if (curCoverBlobUrl) {
 				URL.revokeObjectURL(curCoverBlobUrl);
-				if (!isLyricOnly) {
-					store.set(musicCoverAtom, "");
-				}
+				curCoverBlobUrl = "";
+			}
+
+			if (!isLyricOnly) {
+				store.set(musicNameAtom, "");
+				store.set(musicAlbumNameAtom, "");
+				store.set(musicCoverAtom, "");
+				store.set(musicArtistsAtom, []);
+				store.set(musicIdAtom, "");
+				store.set(musicDurationAtom, 0);
+				store.set(musicPlayingPositionAtom, 0);
+				store.set(musicPlayingAtom, false);
 			}
 		};
 	}, [wsProtocolListenAddr, setConnectedAddrs, store, t, isLyricOnly, setIsLyricPageOpened]);
