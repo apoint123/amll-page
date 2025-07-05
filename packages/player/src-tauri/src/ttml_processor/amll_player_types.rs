@@ -16,6 +16,7 @@ pub struct LyricLine {
     pub words: Vec<LyricWord>,
     pub translated_lyric: String,
     pub roman_lyric: String,
+    #[serde(rename = "isBG")]
     pub is_bg: bool,
     pub is_duet: bool,
     pub start_time: u64,

@@ -5,8 +5,8 @@ use std::{
 };
 
 use quick_xml::{
+    events::{attributes::Attribute, BytesEnd, BytesStart, BytesText, Event},
     Reader,
-    events::{BytesEnd, BytesStart, BytesText, Event, attributes::Attribute},
 };
 use regex::Regex;
 use tracing::{error, warn};
@@ -422,6 +422,42 @@ fn handle_metadata_event<'a>(
         Event::Text(e) => {
             handle_metadata_text_event(e, &mut state.metadata_state, &mut state.text_buffer)?
         }
+        Event::GeneralRef(e) => {
+            let entity_name = str::from_utf8(e.as_ref()).map_err(|err| {
+                ConvertError::Internal(format!("无法将实体名解码为UTF-8: {}", err))
+            })?;
+
+            let decoded_char = match entity_name {
+                "amp" => '&',
+                "lt" => '<',
+                "gt" => '>',
+                "quot" => '"',
+                "apos" => '\'',
+                _ => {
+                    warnings.push(format!(
+                        "TTML元数据警告: 忽略了未知的XML实体 '&{};'",
+                        entity_name
+                    ));
+                    '\0'
+                }
+            };
+
+            if decoded_char != '\0' {
+                if state.metadata_state.in_songwriter_tag {
+                    state
+                        .metadata_state
+                        .current_songwriter_name
+                        .push(decoded_char);
+                } else if state.metadata_state.in_agent_name_tag {
+                    state
+                        .metadata_state
+                        .current_agent_name_text
+                        .push(decoded_char);
+                } else if state.metadata_state.in_ttm_metadata_tag {
+                    state.text_buffer.push(decoded_char);
+                }
+            }
+        }
         Event::End(e) => {
             if e.local_name().as_ref() == TAG_METADATA {
                 state.in_metadata_section = false;
@@ -452,6 +488,37 @@ fn handle_p_event<'a>(
             process_span_start(e, state, reader)?;
         }
         Event::Text(e) => process_text_event(e, state)?,
+        Event::GeneralRef(e) => {
+            let entity_name = str::from_utf8(e.as_ref()).map_err(|err| {
+                ConvertError::Internal(format!("无法将实体名解码为UTF-8: {}", err))
+            })?;
+
+            let decoded_char = match entity_name {
+                "amp" => '&',
+                "lt" => '<',
+                "gt" => '>',
+                "quot" => '"',
+                "apos" => '\'',
+                _ => {
+                    warnings.push(format!(
+                        "TTML解析警告: 忽略了未知的XML实体 '&{};'",
+                        entity_name
+                    ));
+                    '\0'
+                }
+            };
+
+            if decoded_char != '\0' {
+                if let Some(p_data) = state.body_state.current_p_element_data.as_mut() {
+                    if !state.body_state.span_stack.is_empty() {
+                        state.text_buffer.push(decoded_char);
+                    } else {
+                        p_data.line_text_accumulator.push(decoded_char);
+                    }
+                }
+            }
+        }
+
         Event::End(e) => {
             match e.local_name().as_ref() {
                 TAG_BR => {

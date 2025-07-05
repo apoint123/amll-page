@@ -28,6 +28,8 @@ import {
 	musicVolumeAtom,
 	hideLyricViewAtom,
 	musicLyricLinesAtom,
+	isLyricPageOpenedAtom,
+	onClickControlThumbAtom,
 } from "@applemusic-like-lyrics/react-full";
 import {
 	wsProtocolListenAddrAtom,
@@ -43,6 +45,7 @@ export const WSProtocolMusicContext: FC<WSProtocolMusicContextProps> = ({
 }) => {
 	const wsProtocolListenAddr = useAtomValue(wsProtocolListenAddrAtom);
 	const setConnectedAddrs = useSetAtom(wsProtocolConnectedAddrsAtom);
+	const setIsLyricPageOpened = useSetAtom(isLyricPageOpenedAtom);
 	const store = useStore();
 	const { t } = useTranslation();
 	const fftPlayer = useRef<FFTPlayer | undefined>(undefined);
@@ -141,6 +144,12 @@ export const WSProtocolMusicContext: FC<WSProtocolMusicContextProps> = ({
 				onChangeVolumeAtom,
 				toEmit((volume) => {
 					sendWSMessage("setVolume", { volume });
+				}),
+			);
+			store.set(
+				onClickControlThumbAtom,
+				toEmit(() => {
+					setIsLyricPageOpened(false);
 				}),
 			);
 		}
@@ -338,6 +347,9 @@ export const WSProtocolMusicContext: FC<WSProtocolMusicContextProps> = ({
 			// unlistenBody.then((u) => u());
 			unlistenDisconnected.then((u) => u());
 			invoke("ws_close_connection");
+			const doNothing = { onEmit: () => { } };
+			store.set(onClickControlThumbAtom, doNothing);
+
 			if (curCoverBlobUrl) {
 				URL.revokeObjectURL(curCoverBlobUrl);
 				if (!isLyricOnly) {
@@ -345,7 +357,7 @@ export const WSProtocolMusicContext: FC<WSProtocolMusicContextProps> = ({
 				}
 			}
 		};
-	}, [wsProtocolListenAddr, setConnectedAddrs, store, t, isLyricOnly]);
+	}, [wsProtocolListenAddr, setConnectedAddrs, store, t, isLyricOnly, setIsLyricPageOpened]);
 
 	if (isLyricOnly) {
 		return null;
