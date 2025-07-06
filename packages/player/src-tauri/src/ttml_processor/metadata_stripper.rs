@@ -145,6 +145,7 @@ pub fn strip_descriptive_metadata_lines(
         "母带后期处理工程师",
         "母带后期处理录音室",
         "鸣谢",
+        "联合策划",
         // --- 纯英文关键字 ---
         "OP",
         "SP",
@@ -303,6 +304,7 @@ pub fn strip_descriptive_metadata_lines(
         "未经著作权人书面许可，\\s*不得以任何方式\\s*[(\\u{FF08}]包括.*?等[)\\u{FF09}]\\s*使用",
         ".*?发行方\\s*[：:].*?",
         ".*?(?:工作室|特别企划).*?",
+        r"^.*(联合|合作|总|首席)?策划\s*[:：].*$",
     ];
 
     let keywords_to_use: Cow<'_, [String]> = options

@@ -9,8 +9,9 @@ import {
 	QuestionMarkCircledIcon,
 	RocketIcon,
 	TextAlignJustifyIcon,
+	HamburgerMenuIcon,
 } from "@radix-ui/react-icons";
-import { Box, Button, Flex, Separator, Text, Tooltip } from "@radix-ui/themes";
+import { Box, Button, Dialog, Flex, Heading, Separator, Text, Tooltip } from "@radix-ui/themes";
 import { platform } from "@tauri-apps/plugin-os";
 import { atom, useAtom, useAtomValue } from "jotai";
 import {
@@ -20,11 +21,13 @@ import {
 	useEffect,
 	useMemo,
 	useState,
+	useRef,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { ExtensionTab } from "./extension.tsx";
 import { PlayerSettingsTab } from "./player.tsx";
 import { loadedExtensionAtom } from "../../states/extensionsAtoms.ts";
+import styles from "./index.module.css";
 
 const currentPageAtom = atom("player.general");
 
@@ -68,9 +71,9 @@ const SidebarButton: FC<{
 	);
 };
 
-export const Component: FC = () => {
+const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({ onNavigate }) => {
 	const os = usePlatform();
-	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
+	const [currentPage] = useAtom(currentPageAtom);
 	const loadedExtensions = useAtomValue(loadedExtensionsWithSettingsAtom);
 	const { t, i18n } = useTranslation();
 
@@ -130,6 +133,95 @@ export const Component: FC = () => {
 		return pages;
 	}, [os, t]);
 
+	return (
+		<Flex direction="column" gap="1" width="100%">
+			{playerSettingsPages.map((page) => (
+				<SidebarButton
+					key={`player.${page.id}`}
+					icon={page.icon}
+					label={page.label}
+					isActive={currentPage === `player.${page.id}`}
+					onClick={() => onNavigate(`player.${page.id}`)}
+				/>
+			))}
+			<Separator my="2" size="4" />
+			<SidebarButton
+				key="extension.management"
+				icon={<Component1Icon width={20} height={20} />}
+				label={t("settings.extension.tab", "扩展程序管理")}
+				isActive={currentPage === "extension.management"}
+				onClick={() => onNavigate("extension.management")}
+			/>
+			{loadedExtensions.map((extension) => {
+				const id = extension.extensionMeta.id;
+				return (
+					<SidebarButton
+						key={`extension.${id}`}
+						icon={<img src={String(extension.context.extensionMeta.icon)} width="20" height="20" />}
+						label={i18n.getFixedT(null, id as any)("name", id)}
+						isActive={currentPage === `extension.${id}`}
+						onClick={() => onNavigate(`extension.${id}`)}
+					/>
+				);
+			})}
+		</Flex>
+	);
+};
+
+export const Component: FC = () => {
+	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
+	const loadedExtensions = useAtomValue(loadedExtensionsWithSettingsAtom);
+	const { t } = useTranslation();
+	const os = usePlatform();
+
+	const buttonContainerRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		const titlebar = document.getElementById("system-titlebar");
+		const btnContainer = buttonContainerRef.current;
+
+		if (titlebar && btnContainer) {
+			const observer = new ResizeObserver(() => {
+				const width = btnContainer.getBoundingClientRect().width;
+
+				titlebar.style.left = `${width}px`;
+
+				titlebar.style.width = `calc(100% - ${width}px)`;
+			});
+
+			observer.observe(btnContainer);
+
+			return () => {
+				observer.disconnect();
+				if (titlebar) {
+					titlebar.style.left = "0";
+					titlebar.style.width = "100%";
+				}
+			};
+		}
+	}, []);
+
+	useEffect(() => {
+		const handleResize = () => {
+			if (window.innerWidth > 600) {
+				setMenuOpen(false);
+			}
+		};
+
+		window.addEventListener("resize", handleResize);
+
+		return () => {
+			window.removeEventListener("resize", handleResize);
+		};
+	}, []);
+
+	const [isMenuOpen, setMenuOpen] = useState(false);
+
+	const handleNavigate = (pageId: string) => {
+		setCurrentPage(pageId);
+		setMenuOpen(false);
+	};
+
 	const renderContent = () => {
 		if (currentPage.startsWith("player.")) {
 			const category = currentPage.split(".")[1];
@@ -164,7 +256,7 @@ export const Component: FC = () => {
 		<div
 			style={{
 				position: "fixed",
-				top: 0,
+				top: "var(--space-8)",
 				left: 0,
 				right: 0,
 				bottom: "80px",
@@ -183,11 +275,24 @@ export const Component: FC = () => {
 				}
 			`}</style>
 
-			<Box
+			<Dialog.Root open={isMenuOpen} onOpenChange={setMenuOpen}>
+				<Dialog.Content className={styles.dialogContent}>
+					<Heading mb="4">{t('common.settings', '设置')}</Heading>
+					<SidebarContent onNavigate={handleNavigate} />
+				</Dialog.Content>
+			</Dialog.Root>
+
+			<Flex
+				ref={buttonContainerRef}
+				align="center"
+				gap="3"
 				style={{
-					position: "absolute",
+					position: "fixed",
 					top: "var(--space-4)",
-					left: "var(--space-4)",
+					left: 0,
+					height: "var(--system-titlebar-height)",
+					paddingLeft: "var(--space-4)",
+					paddingRight: "var(--space-4)",
 					zIndex: 10,
 				}}
 			>
@@ -196,68 +301,30 @@ export const Component: FC = () => {
 						<ArrowLeftIcon />
 					</Button>
 				</Tooltip>
-			</Box>
+				<Button
+					variant="soft"
+					onClick={() => setMenuOpen(true)}
+					size="3"
+					className={styles.hamburgerButton}
+				>
+					<HamburgerMenuIcon />
+				</Button>
+			</Flex>
 
 			<Flex
 				direction="row"
 				gap="4"
-				height="100%"
 				style={{
-					paddingTop: "calc(var(--space-4) + var(--space-7) + var(--space-4))",
-					paddingLeft: "var(--space-4)",
-					paddingRight: "var(--space-4)",
-					paddingBottom: "var(--space-4)",
+					height: "100%",
+					padding: "var(--space-4)",
+					minHeight: 0,
 				}}
 			>
-				<Box
-					style={{
-						width: "220px",
-						flexShrink: 0,
-						height: "100%",
-						overflowY: "auto",
-						minHeight: 0,
-					}}
-				>
-					<Flex direction="column" gap="1">
-						{playerSettingsPages.map((page) => (
-							<SidebarButton
-								key={`player.${page.id}`}
-								icon={page.icon}
-								label={page.label}
-								isActive={currentPage === `player.${page.id}`}
-								onClick={() => setCurrentPage(`player.${page.id}`)}
-							/>
-						))}
-						<Separator my="2" size="4" />
-						<SidebarButton
-							key="extension.management"
-							icon={<Component1Icon width={20} height={20} />}
-							label={t("settings.extension.tab", "扩展程序管理")}
-							isActive={currentPage === "extension.management"}
-							onClick={() => setCurrentPage("extension.management")}
-						/>
-						{loadedExtensions.map((extension) => {
-							const id = extension.extensionMeta.id;
-							return (
-								<SidebarButton
-									key={`extension.${id}`}
-									icon={
-										<img
-											src={String(extension.context.extensionMeta.icon)}
-											width="20"
-											height="20"
-										/>
-									}
-									label={i18n.getFixedT(null, id as any)("name", id)}
-									isActive={currentPage === `extension.${id}`}
-									onClick={() => setCurrentPage(`extension.${id}`)}
-								/>
-							);
-						})}
-					</Flex>
+				<Box className={styles.sidebarDesktop}>
+					<SidebarContent onNavigate={handleNavigate} />
 				</Box>
-
-				<Box flexGrow="1" minWidth="0" minHeight="0" overflowY="auto">
+				<Box className={styles.contentArea}>
+					<div style={{ height: 'var(--space-4)' }} />
 					{renderContent()}
 				</Box>
 			</Flex>
