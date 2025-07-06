@@ -18,6 +18,7 @@ pub struct LyricLine {
     pub roman_lyric: String,
     #[serde(rename = "isBG")]
     pub is_bg: bool,
+    #[serde(rename = "isDuet")]
     pub is_duet: bool,
     pub start_time: u64,
     pub end_time: u64,

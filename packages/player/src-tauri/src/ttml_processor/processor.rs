@@ -85,11 +85,15 @@ pub fn parse_ttml_for_amll_player(
         );
     }
 
-    if options.agent_recognizer.enabled {
-        agent_recognizer::recognize_agents(&mut parsed_data.lines, &options.agent_recognizer);
-    }
+    let has_agents = parsed_data
+        .lines
+        .iter()
+        .any(|line| line.agent.as_deref() != Some("v1"));
 
-    standardize_agent_ids(&mut parsed_data.lines);
+    if !has_agents && options.agent_recognizer.enabled {
+        agent_recognizer::recognize_agents(&mut parsed_data.lines, &options.agent_recognizer);
+        standardize_agent_ids(&mut parsed_data.lines);
+    }
 
     let duet_map = assign_duet_view(&parsed_data.lines);
 
