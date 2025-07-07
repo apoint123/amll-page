@@ -16,6 +16,7 @@ val tauriProperties = Properties().apply {
 android {
     compileSdk = 36
     namespace = "net.stevexmh.amllplayer"
+    ndkVersion = "27.2.12479018" 
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
         applicationId = "net.stevexmh.amllplayer"
@@ -71,3 +72,30 @@ dependencies {
 }
 
 apply(from = "tauri.build.gradle.kts")
+
+tasks.register<Copy>("copyCppSharedLib") {
+    val ndkDir = project.android.ndkDirectory.absolutePath
+
+    val abiMap = mapOf(
+        "arm64-v8a" to "aarch64-linux-android",
+        "armeabi-v7a" to "armv7a-linux-androideabi",
+        "x86" to "i686-linux-android",
+        "x86_64" to "x86_64-linux-android"
+    )
+
+    project.android.defaultConfig.ndk.abiFilters.forEach { abi ->
+        val toolchainAbi = abiMap[abi]
+        if (toolchainAbi != null) {
+            val sourcePath = "$ndkDir/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/$toolchainAbi/libc++_shared.so"
+            println("Copying $sourcePath for $abi")
+            from(sourcePath)
+            into("src/main/jniLibs/$abi")
+        }
+    }
+}
+
+tasks.whenTaskAdded {
+    if (name.startsWith("package")) {
+        dependsOn("copyCppSharedLib")
+    }
+}
