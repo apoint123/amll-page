@@ -2,19 +2,17 @@ use crate::server::AMLLWebSocketServer;
 use amll_player_core::AudioInfo;
 use anyhow::Context;
 use anyhow::anyhow;
-use claxon::FlacReader;
 use rodio::OutputStream;
 use serde::*;
 use serde_json::Value;
 use std::fs::File;
 use std::net::SocketAddr;
-use symphonia::core::io::{MediaSourceStream, MediaSourceStreamOptions};
+use symphonia::core::io::MediaSourceStream;
 use tauri::ipc::Channel;
 use tauri::{
     AppHandle, Manager, PhysicalSize, Runtime, Size, State, WebviewWindowBuilder,
     utils::config::WindowEffectsConfig, window::Effect,
 };
-use tauri_plugin_fs::OpenOptions;
 use tokio::sync::RwLock;
 use tracing::*;
 

@@ -146,7 +146,6 @@ pub fn strip_descriptive_metadata_lines(
         "母带后期处理录音室",
         "鸣谢",
         "联合策划",
-        // --- 纯英文关键字 ---
         "OP",
         "SP",
         "Lyrics by",
