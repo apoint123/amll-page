@@ -17,8 +17,7 @@ import { InterludeDots } from "./dom/interlude-dots.ts";
  */
 export abstract class LyricPlayerBase
 	extends EventTarget
-	implements HasElement, Disposable
-{
+	implements HasElement, Disposable {
 	protected element: HTMLElement = document.createElement("div");
 
 	protected currentTime = 0;
@@ -250,7 +249,7 @@ export abstract class LyricPlayerBase
 		}
 		return allowed;
 	}
-	private endScrollHandler() {}
+	private endScrollHandler() { }
 	private limitScrollOffset() {
 		this.scrollOffset = Math.max(
 			Math.min(this.scrollBoundary[1], this.scrollOffset),
@@ -477,8 +476,12 @@ export abstract class LyricPlayerBase
 			if (line.isBG) return;
 			const nextLine = lines[i + 1];
 			if (nextLine?.isBG) {
-				nextLine.startTime = Math.min(nextLine.startTime, line.startTime);
-				nextLine.endTime = Math.max(nextLine.endTime, line.endTime);
+				const startTime = Math.min(nextLine.startTime, line.startTime);
+				const endTime = Math.max(nextLine.endTime, line.endTime);
+				line.startTime = startTime;
+				line.endTime = endTime;
+				nextLine.startTime = startTime;
+				nextLine.endTime = endTime;
 			}
 		});
 		for (const line of this.currentLyricLineObjects) {
@@ -789,7 +792,7 @@ export abstract class LyricPlayerBase
 	 * @param params 需要设置的弹簧属性，提供的属性将会覆盖原来的属性，未提供的属性将会保持原样
 	 * @deprecated 考虑到横向弹簧效果并不常见，所以这个函数将会在未来的版本中移除
 	 */
-	setLinePosXSpringParams(_params: Partial<SpringParams> = {}) {}
+	setLinePosXSpringParams(_params: Partial<SpringParams> = {}) { }
 	/**
 	 * 设置所有歌词行在​纵坐标上的弹簧属性，包括重量、弹力和阻力。
 	 *
@@ -860,7 +863,7 @@ export abstract class LyricPlayerBase
 		this.interludeDots.update(delta / 1000);
 	}
 
-	protected onResize() {}
+	protected onResize() { }
 
 	/**
 	 * 获取一个特殊的底栏元素，默认是空白的，可以往内部添加任意元素
@@ -933,7 +936,7 @@ export abstract class LyricLineBase extends EventTarget implements Disposable {
 	abstract disable(): void;
 	abstract resume(): void;
 	abstract pause(): void;
-	onLineSizeChange(size: [number, number]): void {}
+	onLineSizeChange(size: [number, number]): void { }
 	setTransform(
 		top: number = this.top,
 		scale: number = this.scale,
@@ -969,5 +972,5 @@ export abstract class LyricLineBase extends EventTarget implements Disposable {
 		);
 	}
 	abstract update(delta?: number): void;
-	dispose() {}
+	dispose() { }
 }

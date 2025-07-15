@@ -189,9 +189,12 @@ pub fn parse_ttml<'a>(data: impl BufRead) -> std::result::Result<TTMLLyric<'a>, 
                                 }
                             }
                             if let Some(k) = key {
-                                if let Ok(Event::Text(text_event)) = reader.read_event_into(&mut Vec::new()) {
+                                if let Ok(Event::Text(text_event)) =
+                                    reader.read_event_into(&mut Vec::new())
+                                {
                                     if let Ok(unescaped_text) = text_event.unescape() {
-                                        itunes_translations.insert(k, unescaped_text.into_owned().into_bytes());
+                                        itunes_translations
+                                            .insert(k, unescaped_text.into_owned().into_bytes());
                                     }
                                 }
                             }
@@ -307,7 +310,7 @@ pub fn parse_ttml<'a>(data: impl BufRead) -> std::result::Result<TTMLLyric<'a>, 
                         if let CurrentStatus::InDiv = status {
                             status = CurrentStatus::InP;
                             let mut new_line = LyricLine::default();
-                            
+
                             // 在配置行信息时，检查是否有 itunes:key 并查找翻译
                             let mut itunes_key: Option<Vec<u8>> = None;
                             for a in e.attributes().flatten() {
@@ -516,12 +519,8 @@ pub fn parse_ttml<'a>(data: impl BufRead) -> std::result::Result<TTMLLyric<'a>, 
                             status = CurrentStatus::InP;
                             // TODO: 尽可能借用而不克隆
                             // 只有在没有 Apple Music 样式翻译时才使用内嵌翻译
-                            let current_line = result
-                                .lines
-                                .iter_mut()
-                                .rev()
-                                .find(|x| !x.is_bg)
-                                .unwrap();
+                            let current_line =
+                                result.lines.iter_mut().rev().find(|x| !x.is_bg).unwrap();
 
                             if current_line.translated_lyric.is_empty() {
                                 current_line.translated_lyric = str_buf.clone().into();

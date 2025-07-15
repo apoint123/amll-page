@@ -72,6 +72,7 @@ const debugValues = {
 			lyricPlayer.pause();
 		}
 	},
+	fadeWidth: 0.5,
 	lineSprings: {
 		posX: {
 			mass: 1,
@@ -188,6 +189,12 @@ bgGui
 {
 	const animation = gui.addFolder("歌词行动画/效果");
 	animation
+		.add(debugValues, "fadeWidth", 0, 10, 0.01)
+		.name("歌词渐变宽度")
+		.onChange((v: number) => {
+			lyricPlayer.setWordFadeWidth(v);
+		});
+	animation
 		.add(debugValues, "enableBlur")
 		.name("启用歌词模糊")
 		.onChange((v: boolean) => {
@@ -241,6 +248,7 @@ lyricPlayer.addEventListener("line-click", (evt) => {
 	evt.stopImmediatePropagation();
 	evt.stopPropagation();
 	console.log(e.line, e.lineIndex);
+	audio.currentTime = e.line.getLine().startTime / 1000;
 });
 
 const stats = new Stats();
@@ -270,8 +278,8 @@ declare global {
 	interface Window {
 		globalLyricPlayer: DomLyricPlayer;
 		globalBackground:
-			| BackgroundRender<PixiRenderer>
-			| BackgroundRender<MeshGradientRenderer>;
+		| BackgroundRender<PixiRenderer>
+		| BackgroundRender<MeshGradientRenderer>;
 	}
 }
 
