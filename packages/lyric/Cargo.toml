@@ -29,6 +29,7 @@ cipher = { version = "0.4", optional = true }
 miniz_oxide = { version = "^0.8", optional = true }
 quick-xml = { version = "^0.38", optional = true }
 thiserror = { version = "^2", optional = true }
+# rayon = { version = "^1.7", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = { version = "0.2" }
@@ -38,4 +39,4 @@ wee_alloc = { version = "0.4", optional = true }
 js-sys = { version = "0.3", optional = true }
 
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = false
+wasm-opt = true

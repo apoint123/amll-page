@@ -22,6 +22,8 @@
               QQ Music.
 *********************************************************************/
 
+use std::sync::LazyLock;
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum DesMode {
     Encrypt = 0,
@@ -30,24 +32,24 @@ pub enum DesMode {
 
 // Macros converted to functions for better Rust practices
 #[inline]
-fn bitnum(a: &[u8], b: usize, c: usize) -> u32 {
+const fn bitnum(a: &[u8], b: usize, c: usize) -> u32 {
     let byte_idx = (b / 32 * 4) + 3 - (b % 32 / 8);
     let bit_in_byte = 7 - (b % 8);
     ((a[byte_idx] >> bit_in_byte) & 0x01) as (u32) << c
 }
 
 #[inline]
-fn bitnumintr(a: u32, b: usize, c: usize) -> u32 {
+const fn bitnumintr(a: u32, b: usize, c: usize) -> u32 {
     ((a >> (31 - b)) & 0x00000001) << c
 }
 
 #[inline]
-fn bitnumintl(a: u32, b: usize, c: usize) -> u32 {
+const fn bitnumintl(a: u32, b: usize, c: usize) -> u32 {
     ((a << b) & 0x80000000) >> c
 }
 
 #[inline]
-fn sboxbit(a: u8) -> usize {
+const fn sboxbit(a: u8) -> usize {
     ((a & 0x20) | ((a & 0x1f) >> 1) | ((a & 0x01) << 4)) as usize
 }
 
@@ -99,6 +101,64 @@ static SBOX8: [u8; 64] = [
     0, 14, 9, 2, 7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8, 2, 1, 14, 7, 4, 10, 8, 13,
     15, 12, 9, 0, 3, 5, 6, 11,
 ];
+
+// S-Box + P-Box combined lookup tables for performance optimization
+fn generate_sp_tables() -> [[u32; 64]; 8] {
+    let mut sp_tables = [[0u32; 64]; 8];
+    let sboxes = [
+        &SBOX1, &SBOX2, &SBOX3, &SBOX4, &SBOX5, &SBOX6, &SBOX7, &SBOX8,
+    ];
+
+    for s_box_idx in 0..8 {
+        for s_box_input in 0..64 {
+            let s_box_index = sboxbit(s_box_input as u8);
+            let four_bit_output = sboxes[s_box_idx][s_box_index];
+
+            // Place 4-bit S-box output in correct position (28-bit positions)
+            let pre_p_box_val = (four_bit_output as u32) << (28 - (s_box_idx * 4));
+
+            // Apply P-box permutation
+            let mut post_p_box_val = 0u32;
+            for (dest_bit, &source_bit) in P_BOX.iter().enumerate() {
+                let dest_mask = 1u32 << (31 - dest_bit);
+                let source_mask = 1u32 << (31 - source_bit);
+                if (pre_p_box_val & source_mask) != 0 {
+                    post_p_box_val |= dest_mask;
+                }
+            }
+
+            sp_tables[s_box_idx][s_box_input] = post_p_box_val;
+        }
+    }
+    sp_tables
+}
+
+// Key schedule constants
+static KEY_RND_SHIFT: [usize; 16] = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
+
+static KEY_PERM_C: [usize; 28] = [
+    56, 48, 40, 32, 24, 16, 8, 0, 57, 49, 41, 33, 25, 17, 9, 1, 58, 50, 42, 34, 26, 18, 10, 2, 59,
+    51, 43, 35,
+];
+
+static KEY_PERM_D: [usize; 28] = [
+    62, 54, 46, 38, 30, 22, 14, 6, 61, 53, 45, 37, 29, 21, 13, 5, 60, 52, 44, 36, 28, 20, 12, 4,
+    27, 19, 11, 3,
+];
+
+static KEY_COMPRESSION: [usize; 48] = [
+    13, 16, 10, 23, 0, 4, 2, 27, 14, 5, 20, 9, 22, 18, 11, 3, 25, 7, 15, 6, 26, 19, 12, 1, 40, 51,
+    30, 36, 46, 54, 29, 39, 50, 44, 32, 47, 43, 48, 38, 55, 33, 52, 45, 41, 49, 35, 28, 31,
+];
+
+// P-box permutation table (0-based indexing)
+static P_BOX: [usize; 32] = [
+    15, 6, 19, 20, 28, 11, 27, 16, 0, 14, 22, 25, 4, 17, 30, 9, 1, 7, 23, 13, 31, 26, 2, 8, 18, 12,
+    29, 5, 21, 10, 3, 24,
+];
+
+// Pre-computed S-Box + P-Box lookup tables
+static SP_TABLES: LazyLock<[[u32; 64]; 8]> = LazyLock::new(generate_sp_tables);
 
 // Initial Permutation
 fn ip(input: &[u8]) -> [u32; 2] {
@@ -172,7 +232,7 @@ fn ip(input: &[u8]) -> [u32; 2] {
 }
 
 // Inverse Initial Permutation
-fn inv_ip(state: [u32; 2], output: &mut [u8]) {
+const fn inv_ip(state: [u32; 2], output: &mut [u8]) {
     output[3] = (bitnumintr(state[1], 7, 7)
         | bitnumintr(state[0], 7, 6)
         | bitnumintr(state[1], 15, 5)
@@ -246,7 +306,7 @@ fn inv_ip(state: [u32; 2], output: &mut [u8]) {
         | bitnumintr(state[0], 24, 0)) as u8;
 }
 
-// F function
+// F function - optimized with S-P lookup tables
 fn f(state: u32, key: &[u8]) -> u32 {
     // Expansion Permutation
     let t1 = bitnumintl(state, 31, 0)
@@ -292,74 +352,26 @@ fn f(state: u32, key: &[u8]) -> u32 {
             *state_byte ^= key_byte;
         });
 
-    // S-Box Permutation
-    let result = ((SBOX1[sboxbit(lrgstate[0] >> 2)] as u32) << 28)
-        | ((SBOX2[sboxbit(((lrgstate[0] & 0x03) << 4) | (lrgstate[1] >> 4))] as u32) << 24)
-        | ((SBOX3[sboxbit(((lrgstate[1] & 0x0f) << 2) | (lrgstate[2] >> 6))] as u32) << 20)
-        | ((SBOX4[sboxbit(lrgstate[2] & 0x3f)] as u32) << 16)
-        | ((SBOX5[sboxbit(lrgstate[3] >> 2)] as u32) << 12)
-        | ((SBOX6[sboxbit(((lrgstate[3] & 0x03) << 4) | (lrgstate[4] >> 4))] as u32) << 8)
-        | ((SBOX7[sboxbit(((lrgstate[4] & 0x0f) << 2) | (lrgstate[5] >> 6))] as u32) << 4)
-        | (SBOX8[sboxbit(lrgstate[5] & 0x3f)] as u32);
-
-    // P-Box Permutation
-    bitnumintl(result, 15, 0)
-        | bitnumintl(result, 6, 1)
-        | bitnumintl(result, 19, 2)
-        | bitnumintl(result, 20, 3)
-        | bitnumintl(result, 28, 4)
-        | bitnumintl(result, 11, 5)
-        | bitnumintl(result, 27, 6)
-        | bitnumintl(result, 16, 7)
-        | bitnumintl(result, 0, 8)
-        | bitnumintl(result, 14, 9)
-        | bitnumintl(result, 22, 10)
-        | bitnumintl(result, 25, 11)
-        | bitnumintl(result, 4, 12)
-        | bitnumintl(result, 17, 13)
-        | bitnumintl(result, 30, 14)
-        | bitnumintl(result, 9, 15)
-        | bitnumintl(result, 1, 16)
-        | bitnumintl(result, 7, 17)
-        | bitnumintl(result, 23, 18)
-        | bitnumintl(result, 13, 19)
-        | bitnumintl(result, 31, 20)
-        | bitnumintl(result, 26, 21)
-        | bitnumintl(result, 2, 22)
-        | bitnumintl(result, 8, 23)
-        | bitnumintl(result, 18, 24)
-        | bitnumintl(result, 12, 25)
-        | bitnumintl(result, 29, 26)
-        | bitnumintl(result, 5, 27)
-        | bitnumintl(result, 21, 28)
-        | bitnumintl(result, 10, 29)
-        | bitnumintl(result, 3, 30)
-        | bitnumintl(result, 24, 31)
+    // Use S-P lookup tables for better performance
+    SP_TABLES[0][(lrgstate[0] >> 2) as usize]
+        | SP_TABLES[1][(((lrgstate[0] & 0x03) << 4) | (lrgstate[1] >> 4)) as usize]
+        | SP_TABLES[2][(((lrgstate[1] & 0x0f) << 2) | (lrgstate[2] >> 6)) as usize]
+        | SP_TABLES[3][(lrgstate[2] & 0x3f) as usize]
+        | SP_TABLES[4][(lrgstate[3] >> 2) as usize]
+        | SP_TABLES[5][(((lrgstate[3] & 0x03) << 4) | (lrgstate[4] >> 4)) as usize]
+        | SP_TABLES[6][(((lrgstate[4] & 0x0f) << 2) | (lrgstate[5] >> 6)) as usize]
+        | SP_TABLES[7][(lrgstate[5] & 0x3f) as usize]
 }
 
 // Key setup
 pub fn des_key_setup(key: &[u8], mode: DesMode) -> [[u8; 6]; 16] {
-    let key_rnd_shift = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
-    let key_perm_c = [
-        56, 48, 40, 32, 24, 16, 8, 0, 57, 49, 41, 33, 25, 17, 9, 1, 58, 50, 42, 34, 26, 18, 10, 2,
-        59, 51, 43, 35,
-    ];
-    let key_perm_d = [
-        62, 54, 46, 38, 30, 22, 14, 6, 61, 53, 45, 37, 29, 21, 13, 5, 60, 52, 44, 36, 28, 20, 12,
-        4, 27, 19, 11, 3,
-    ];
-    let key_compression = [
-        13, 16, 10, 23, 0, 4, 2, 27, 14, 5, 20, 9, 22, 18, 11, 3, 25, 7, 15, 6, 26, 19, 12, 1, 40,
-        51, 30, 36, 46, 54, 29, 39, 50, 44, 32, 47, 43, 48, 38, 55, 33, 52, 45, 41, 49, 35, 28, 31,
-    ];
-
     // Permutated Choice #1
-    let mut c = key_perm_c
+    let mut c = KEY_PERM_C
         .iter()
         .enumerate()
         .fold(0u32, |acc, (i, &perm)| acc | bitnum(key, perm, 31 - i));
 
-    let mut d = key_perm_d
+    let mut d = KEY_PERM_D
         .iter()
         .enumerate()
         .fold(0u32, |acc, (i, &perm)| acc | bitnum(key, perm, 31 - i));
@@ -367,7 +379,7 @@ pub fn des_key_setup(key: &[u8], mode: DesMode) -> [[u8; 6]; 16] {
     let mut schedule = [[0u8; 6]; 16];
 
     // Generate the 16 subkeys
-    for (i, &shift) in key_rnd_shift.iter().enumerate() {
+    for (i, &shift) in KEY_RND_SHIFT.iter().enumerate() {
         c = ((c << shift) | (c >> (28 - shift))) & 0xfffffff0;
         d = ((d << shift) | (d >> (28 - shift))) & 0xfffffff0;
 
@@ -380,7 +392,7 @@ pub fn des_key_setup(key: &[u8], mode: DesMode) -> [[u8; 6]; 16] {
         schedule[to_gen] = [0; 6];
 
         // Generate subkey - process first 24 compression values for c register
-        key_compression
+        KEY_COMPRESSION
             .iter()
             .take(24)
             .enumerate()
@@ -389,7 +401,7 @@ pub fn des_key_setup(key: &[u8], mode: DesMode) -> [[u8; 6]; 16] {
             });
 
         // Process remaining 24 compression values for d register
-        key_compression
+        KEY_COMPRESSION
             .iter()
             .skip(24)
             .enumerate()

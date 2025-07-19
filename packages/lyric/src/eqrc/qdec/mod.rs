@@ -17,7 +17,8 @@ impl TripleQDES {
         Self { schdule }
     }
 
-    pub fn crypt_inplace(&mut self, block: &mut [u8; 8]) {
+    #[inline]
+    pub fn crypt_inplace(&self, block: &mut [u8; 8]) {
         // debug_assert_eq!(block.len(), 8);
         // block.copy_from_slice(&des::three_des_crypt(block, &self.schdule));
         des::three_des_crypt(block, &self.schdule);
