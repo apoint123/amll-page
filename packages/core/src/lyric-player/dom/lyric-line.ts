@@ -361,7 +361,7 @@ export class LyricLineEl extends LyricLineBase {
 					if (emp) {
 						mainWordEl.classList.add(styles.emphasize);
 						const charEls: HTMLSpanElement[] = [];
-						for (const char of word.word.trim().split("")) {
+						for (const char of word.word.trim()) {
 							const charEl = document.createElement("span");
 							charEl.innerText = char;
 							charEls.push(charEl);
@@ -440,7 +440,7 @@ export class LyricLineEl extends LyricLineBase {
 				if (LyricLineBase.shouldEmphasize(chunk)) {
 					mainWordEl.classList.add(styles.emphasize);
 					const charEls: HTMLSpanElement[] = [];
-					for (const char of chunk.word.trim().split("")) {
+					for (const char of chunk.word.trim()) {
 						const charEl = document.createElement("span");
 						charEl.innerText = char;
 						charEls.push(charEl);
