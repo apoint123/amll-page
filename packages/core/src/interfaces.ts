@@ -32,6 +32,8 @@ export interface LyricWord {
 	endTime: number;
 	/** 单词内容 */
 	word: string;
+	/** 单词的音译内容 */
+	romanWord: string;
 	/** 单词内容是否包含冒犯性的不雅用语 */
 	obscene: boolean;
 }

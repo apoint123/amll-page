@@ -305,6 +305,7 @@ const mapLyric = (
 const mapTTMLLyric = (line: RawLyricLine): LyricLine => ({
 	...line,
 	words: line.words.map((word) => ({ obscene: false, ...word })),
+	romanLyric: "",
 });
 
 async function loadLyric() {

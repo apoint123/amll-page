@@ -103,6 +103,11 @@
 	& span {
 		display: inline-block;
 	}
+	
+	.romanWord {
+		font-size: 0.5em;
+		line-height: 1em;
+	}
 
 	&>span,
 	span.emphasizeWrapper {

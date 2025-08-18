@@ -455,21 +455,16 @@ export abstract class LyricPlayerBase
 
 		this.hasDuetLine = this.processedLines.some((line) => line.isDuet);
 
-		// 将行间有较短空隙的两个歌词行的结束时间拉长，与下一行歌词行的开始时间一致，以便于更好的显示
-		// Update: 感觉还是不太适用，所以移除了
-		// this.processedLines.forEach((line, i, lines) => {
-		// 	const nextLine = lines[i + 1];
-		// 	const lastWord = line.words[line.words.length - 1];
-		// 	if (lastWord) {
-		// 		if (nextLine) {
-		// 			if (nextLine.startTime > line.endTime) {
-		// 				line.endTime = Math.min(line.endTime + 1500, nextLine.startTime);
-		// 			}
-		// 		} else {
-		// 			line.endTime = line.endTime + 1500;
-		// 		}
-		// 	}
-		// });
+		// 将行开始时间提早最多一秒
+		this.processedLines.forEach((line, i, lines) => {
+			const prevLine = lines[i - 1];
+			if (prevLine) {
+				// 增加一个 min 边界是为了如果现有歌词已经和上一行歌词有交错，则不做修改
+				line.startTime = Math.max(Math.min(prevLine.endTime, line.startTime), line.startTime - 1000);
+			} else {
+				line.startTime = Math.max(0, line.startTime - 1000);
+			}
+		});
 
 		// 让背景歌词和上一行歌词一同出现并一同消失
 		this.processedLines.forEach((line, i, lines) => {
@@ -936,7 +931,7 @@ export abstract class LyricLineBase extends EventTarget implements Disposable {
 	abstract disable(): void;
 	abstract resume(): void;
 	abstract pause(): void;
-	onLineSizeChange(size: [number, number]): void { }
+	onLineSizeChange(_size: [number, number]): void { }
 	setTransform(
 		top: number = this.top,
 		scale: number = this.scale,
