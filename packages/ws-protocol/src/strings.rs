@@ -1,14 +1,14 @@
 //! Type definitions for string readers.
 
 use binrw::{
-    io::{Read, Seek, Write},
     BinRead, BinResult, BinWrite, Endian,
+    io::{Read, Seek, Write},
 };
 use core::fmt::{self, Write as _};
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::Formatter;
-use std::string::{FromUtf16Error, FromUtf8Error};
+use std::string::{FromUtf8Error, FromUtf16Error};
 
 /// A null-terminated 8-bit string.
 ///

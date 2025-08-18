@@ -66,6 +66,7 @@ pub fn parse_words(src: &str) -> IResult<&str, Vec<LyricWord<'_>>> {
             start_time: x.0.0,
             end_time: x.0.0 + x.0.1,
             word: Cow::Borrowed(x.1),
+            roman_word: std::borrow::Cow::Borrowed(""),
         })
         .collect();
     Ok((src, words))
@@ -102,7 +103,7 @@ pub fn parse_line(src: &str) -> IResult<&str, LyricLine<'_>> {
     }
 }
 
-pub fn parse_yrc(src: &str) -> Vec<LyricLine> {
+pub fn parse_yrc<'a>(src: &'a str) -> Vec<LyricLine<'a>> {
     let lines = src.lines();
     let mut result = Vec::with_capacity(lines.size_hint().1.unwrap_or(1024).min(1024));
 

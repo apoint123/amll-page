@@ -39,6 +39,7 @@ pub struct LyricWord<'a> {
     pub start_time: u64,
     pub end_time: u64,
     pub word: Cow<'a, str>,
+    pub roman_word: Cow<'a, str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -48,6 +49,7 @@ pub struct LyricWordOwned {
     pub start_time: u64,
     pub end_time: u64,
     pub word: String,
+    pub roman_word: String,
 }
 
 impl<'a> From<LyricWord<'a>> for LyricWordOwned {
@@ -56,6 +58,7 @@ impl<'a> From<LyricWord<'a>> for LyricWordOwned {
             start_time: value.start_time,
             end_time: value.end_time,
             word: value.word.into_owned(),
+            roman_word: value.roman_word.into_owned(),
         }
     }
 }
@@ -66,6 +69,7 @@ impl LyricWord<'_> {
             start_time: self.start_time,
             end_time: self.end_time,
             word: self.word.clone().into_owned(),
+            roman_word: self.roman_word.clone().into_owned(),
         }
     }
 
@@ -75,11 +79,12 @@ impl LyricWord<'_> {
 }
 
 impl LyricWordOwned {
-    pub fn to_ref(&self) -> LyricWord {
+    pub fn to_ref<'a>(&'a self) -> LyricWord<'a> {
         LyricWord {
             start_time: self.start_time,
             end_time: self.end_time,
             word: self.word.as_str().into(),
+            roman_word: self.roman_word.as_str().into(),
         }
     }
 
@@ -161,7 +166,7 @@ impl LyricLine<'_> {
 }
 
 impl LyricLineOwned {
-    pub fn to_ref(&self) -> LyricLine {
+    pub fn to_ref<'a>(&'a self) -> LyricLine<'a> {
         LyricLine {
             words: self.words.iter().map(|w| w.to_ref()).collect(),
             translated_lyric: self.translated_lyric.as_str().into(),

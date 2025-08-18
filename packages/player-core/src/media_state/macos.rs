@@ -1,8 +1,12 @@
-use std::{cell::Cell, ptr::NonNull, sync::{Mutex, RwLock}};
+use std::{
+    cell::Cell,
+    ptr::NonNull,
+    sync::{Mutex, RwLock},
+};
 
 use super::*;
 use anyhow::Context;
-use objc2::{rc::*, runtime::AnyObject, AnyThread};
+use objc2::{AnyThread, rc::*, runtime::AnyObject};
 use objc2_app_kit::*;
 use objc2_foundation::*;
 use objc2_media_player::*;

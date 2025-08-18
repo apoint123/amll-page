@@ -46,7 +46,7 @@ impl<'a> From<TTMLLyric<'a>> for TTMLLyricOwned {
 }
 
 impl TTMLLyricOwned {
-    pub fn to_ref(&self) -> TTMLLyric {
+    pub fn to_ref<'a>(&'a self) -> TTMLLyric<'a> {
         TTMLLyric {
             lines: self.lines.iter().map(|x| x.to_ref()).collect(),
             metadata: self

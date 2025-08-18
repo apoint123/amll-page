@@ -26,6 +26,7 @@ pub fn parse_line(src: &str) -> IResult<&str, LyricLine<'_>> {
             start_time,
             end_time,
             word: word.into(),
+            roman_word: std::borrow::Cow::Borrowed(""),
         });
         src = s;
         start_time = end_time;
@@ -33,7 +34,7 @@ pub fn parse_line(src: &str) -> IResult<&str, LyricLine<'_>> {
     Ok((src, result))
 }
 
-pub fn parse_eslrc(src: &str) -> Vec<LyricLine> {
+pub fn parse_eslrc<'a>(src: &'a str) -> Vec<LyricLine<'a>> {
     let lines = src.lines();
     let mut result = Vec::with_capacity(lines.size_hint().1.unwrap_or(1024).min(1024));
 
