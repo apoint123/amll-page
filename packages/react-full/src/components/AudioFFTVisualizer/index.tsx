@@ -44,6 +44,23 @@ export const AudioFFTVisualizer: FC<
 
 				let buf: number[] = [];
 
+				// 线性重采样，将 src 重采样为指定长度
+				function resampleLinear(src: number[], dstLen: number): number[] {
+					const n = src.length;
+					if (dstLen <= 0 || n === 0) return [];
+					if (n === dstLen) return src.slice();
+					const out = new Array(dstLen);
+					const scale = (n - 1) / Math.max(1, dstLen - 1);
+					for (let i = 0; i < dstLen; i++) {
+						const x = i * scale;
+						const x0 = Math.floor(x);
+						const x1 = Math.min(n - 1, x0 + 1);
+						const t = x - x0;
+						out[i] = src[x0] * (1 - t) + src[x1] * t;
+					}
+					return out;
+				}
+
 				function onFrame() {
 					if (!(canvas && ctx) || stopped) return;
 					const width = canvas.width;
@@ -68,28 +85,36 @@ export const AudioFFTVisualizer: FC<
 					ctx.clearRect(0, 0, width, height);
 					{
 						ctx.beginPath();
-						const targetMaxValue = Math.max.apply(Math, buf);
+
+						// 根据画布宽度与 DPR 计算目标绘制条数
+						const dpr = window.devicePixelRatio || 1;
+						const desiredSpacing = 8 * dpr; // 目标线间距（设备像素）
+						let desiredCount = Math.floor(width / Math.max(1, desiredSpacing));
+						desiredCount = Math.max(8, desiredCount);
+						const lineCount = buf.length > 0 ? Math.min(buf.length, desiredCount) : 0;
+
+						const display = lineCount > 0 ? resampleLinear(buf, lineCount) : [];
+
+						const targetMaxValue = display.length > 0 ? Math.max.apply(Math, display) : 0;
 						maxValue = Math.max(targetMaxValue * 0.1 + maxValue * 0.9, 100);
 
-						const len = buf.length;
-
-						const barWidth = width / len;
+						const len = Math.max(1, display.length);
+						const barWidth = width / len; // 步长（中心点间距）
 
 						ctx.strokeStyle = "white";
-						ctx.lineWidth = 4 * window.devicePixelRatio;
+						ctx.lineWidth = 4 * dpr;
 						ctx.lineCap = "round";
 						ctx.lineJoin = "round";
 
 						const barBeginY = height - barWidth;
 
-						for (let i = 0; i < buf.length; i++) {
+						for (let i = 0; i < display.length; i++) {
 							const x = barWidth * (i + 0.5);
 							ctx.moveTo(x, barBeginY);
+							const norm = Math.min(1, Math.max(0, display[i] / maxValue));
 							ctx.lineTo(
 								x,
-								barBeginY -
-									Math.min(1, Math.max(0, buf[i] / maxValue)) ** 2 *
-										(height - barWidth * 2),
+								barBeginY - norm ** 2 * (height - barWidth * 2),
 							);
 						}
 

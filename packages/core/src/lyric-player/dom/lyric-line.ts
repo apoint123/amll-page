@@ -87,6 +87,8 @@ type MouseEventListener = (
 export class LyricLineEl extends LyricLineBase {
 	private element: HTMLElement = document.createElement("div");
 	private splittedWords: RealWord[] = [];
+	// 标记是否已经构建了行内的实际 DOM（单词与动画等）
+	private built = false;
 
 	// 由 LyricPlayer 来设置
 	lineSize: number[] = [0, 0];
@@ -123,7 +125,7 @@ export class LyricLineEl extends LyricLineBase {
 		main.setAttribute("class", styles.lyricMainLine);
 		trans.setAttribute("class", styles.lyricSubLine);
 		roman.setAttribute("class", styles.lyricSubLine);
-		this.rebuildElement();
+		// 延迟构建具体行内容，进入可视区（含 overscan）时再构建
 		this.rebuildStyle();
 	}
 	private listenersMap = new Map<string, Set<MouseEventListener>>();
@@ -285,6 +287,11 @@ export class LyricLineEl extends LyricLineBase {
 			this._prevParentEl.appendChild(this.element);
 			this.lyricPlayer.resizeObserver.observe(this.element);
 		}
+		if (!this.built) {
+			this.rebuildElement();
+			this.built = true;
+			this.updateMaskImageSync();
+		}
 		this.rebuildStyle();
 	}
 	hide() {
@@ -292,6 +299,10 @@ export class LyricLineEl extends LyricLineBase {
 		if (this.element.parentElement) {
 			this._prevParentEl.removeChild(this.element);
 			this.lyricPlayer.resizeObserver.unobserve(this.element);
+		}
+		if (this.built) {
+			this.disposeElements();
+			this.built = false;
 		}
 	}
 	private rebuildStyle() {
@@ -962,7 +973,8 @@ export class LyricLineEl extends LyricLineBase {
 		const h = this.lyricPlayer.lyricLinesSize.get(this)?.[1] ?? 0;
 		const b = t + h;
 		const pb = this.lyricPlayer.size[1];
-		return !(t > pb + h || b < -h);
+		const ov = this.lyricPlayer.getOverscanPx();
+		return !(t > pb + h + ov || b < -h - ov);
 	}
 	private disposeElements() {
 		for (const realWord of this.splittedWords) {
@@ -979,10 +991,17 @@ export class LyricLineEl extends LyricLineBase {
 			realWord.elementAnimations = [];
 			realWord.maskAnimations = [];
 			realWord.subElements = [];
-			realWord.mainElement.remove();
-			realWord.mainElement.parentNode?.removeChild(realWord.mainElement);
+			if (realWord.mainElement?.parentNode) {
+				realWord.mainElement.parentNode.removeChild(realWord.mainElement);
+			}
 		}
 		this.splittedWords = [];
+		const main = this.element.children[0] as HTMLDivElement;
+		const trans = this.element.children[1] as HTMLDivElement;
+		const roman = this.element.children[2] as HTMLDivElement;
+		if (main) main.innerHTML = "";
+		if (trans) trans.innerHTML = "";
+		if (roman) roman.innerHTML = "";
 	}
 	override dispose(): void {
 		this.disposeElements();

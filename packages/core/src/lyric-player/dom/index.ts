@@ -126,10 +126,10 @@ export class DomLyricPlayer extends LyricPlayerBase {
 			const lineEl = new LyricLineEl(this, line);
 			lineEl.addMouseEventListener("click", this.onLineClickedHandler);
 			lineEl.addMouseEventListener("contextmenu", this.onLineClickedHandler);
-			this.element.appendChild(lineEl.getElement());
+			// 不立即挂载到 DOM，进入视图（含 overscan）后在 LyricLineEl 内部挂载
 			this.lyricLinesIndexes.set(lineEl, i);
+			// 仍需建立元素到行对象的映射，供 ResizeObserver 使用
 			this.lyricLineElementMap.set(lineEl.getElement(), lineEl);
-			// lineEl.updateMaskImageSync();
 			return lineEl;
 		});
 
@@ -137,6 +137,8 @@ export class DomLyricPlayer extends LyricPlayerBase {
 		this.setLinePosYSpringParams({});
 		this.setLineScaleSpringParams({});
 		this.calcLayout(true);
+		// 触发一次更新以便立即挂载在视区/overscan 内的行元素
+		this.update(0);
 	}
 
 	override pause() {

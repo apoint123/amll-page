@@ -17,7 +17,8 @@ import { InterludeDots } from "./dom/interlude-dots.ts";
  */
 export abstract class LyricPlayerBase
 	extends EventTarget
-	implements HasElement, Disposable {
+	implements HasElement, Disposable
+{
 	protected element: HTMLElement = document.createElement("div");
 
 	protected currentTime = 0;
@@ -53,6 +54,12 @@ export abstract class LyricPlayerBase
 	protected isPageVisible = true;
 
 	protected initialLayoutFinished = false;
+
+	/**
+	 * 视图额外预渲染（overscan）距离，单位：像素。
+	 * 用于决定在视口之外多少距离内也认为是“可见”，以便提前创建/保留行元素。
+	 */
+	protected overscanPx = 300;
 
 	protected posXSpringParams: Partial<SpringParams> = {
 		mass: 1,
@@ -249,7 +256,7 @@ export abstract class LyricPlayerBase
 		}
 		return allowed;
 	}
-	private endScrollHandler() { }
+	private endScrollHandler() {}
 	private limitScrollOffset() {
 		this.scrollOffset = Math.max(
 			Math.min(this.scrollBoundary[1], this.scrollOffset),
@@ -337,6 +344,18 @@ export abstract class LyricPlayerBase
 	 */
 	setAlignPosition(alignPosition: number) {
 		this.alignPosition = alignPosition;
+	}
+
+	/**
+	 * 设置 overscan（视图上下额外缓冲渲染区）距离，单位：像素。
+	 * @param px 像素值，默认 300
+	 */
+	setOverscanPx(px: number) {
+		this.overscanPx = Math.max(0, px | 0);
+	}
+	/** 获取当前 overscan 像素距离 */
+	getOverscanPx() {
+		return this.overscanPx;
 	}
 	/**
 	 * 设置是否使用物理弹簧算法实现歌词动画效果，默认启用
@@ -434,6 +453,9 @@ export abstract class LyricPlayerBase
 	 * @param initialTime 初始时间，默认为 0
 	 */
 	setLyricLines(lines: LyricLine[], initialTime = 0) {
+		if (import.meta.env.DEV) {
+			console.log("设置歌词行", lines, initialTime);
+		}
 		this.initialLayoutFinished = true;
 		for (const line of lines) {
 			for (const word of line.words) {
@@ -456,29 +478,46 @@ export abstract class LyricPlayerBase
 		this.hasDuetLine = this.processedLines.some((line) => line.isDuet);
 
 		// 将行开始时间提早最多一秒
-		this.processedLines.forEach((line, i, lines) => {
-			const prevLine = lines[i - 1];
+		for (let i = this.processedLines.length - 1; i >= 0; i--) {
+			const line = this.processedLines[i];
+			const prevLine = this.processedLines[i - 1];
 			if (prevLine) {
 				// 增加一个 min 边界是为了如果现有歌词已经和上一行歌词有交错，则不做修改
-				line.startTime = Math.max(Math.min(prevLine.endTime, line.startTime), line.startTime - 1000);
+				line.startTime = Math.max(
+					Math.min(prevLine.endTime, line.startTime),
+					line.startTime - 1000,
+				);
 			} else {
 				line.startTime = Math.max(0, line.startTime - 1000);
 			}
-		});
+		}
 
 		// 让背景歌词和上一行歌词一同出现并一同消失
-		this.processedLines.forEach((line, i, lines) => {
-			if (line.isBG) return;
-			const nextLine = lines[i + 1];
+		for (let i = this.processedLines.length - 1; i >= 0; i--) {
+			const line = this.processedLines[i];
+			if (line.isBG) continue;
+			const nextLine = this.processedLines[i + 1];
 			if (nextLine?.isBG) {
-				const startTime = Math.min(nextLine.startTime, line.startTime);
-				const endTime = Math.max(nextLine.endTime, line.endTime);
+				const bgStartTime = Math.min(
+					nextLine.words
+						.filter((w) => w.word.trim().length > 0)
+						.map((w) => w.startTime)[0] ?? nextLine.startTime,
+					line.startTime,
+				);
+				const bgEndTime = Math.max(
+					nextLine.words
+						.filter((w) => w.word.trim().length > 0)
+						.map((w) => w.endTime)[0] ?? nextLine.endTime,
+					line.endTime,
+				);
+				const startTime = Math.min(bgStartTime, line.startTime);
+				const endTime = Math.max(bgEndTime, line.endTime);
 				line.startTime = startTime;
 				line.endTime = endTime;
 				nextLine.startTime = startTime;
 				nextLine.endTime = endTime;
 			}
-		});
+		}
 		for (const line of this.currentLyricLineObjects) {
 			line.dispose();
 		}
@@ -787,7 +826,7 @@ export abstract class LyricPlayerBase
 	 * @param params 需要设置的弹簧属性，提供的属性将会覆盖原来的属性，未提供的属性将会保持原样
 	 * @deprecated 考虑到横向弹簧效果并不常见，所以这个函数将会在未来的版本中移除
 	 */
-	setLinePosXSpringParams(_params: Partial<SpringParams> = {}) { }
+	setLinePosXSpringParams(_params: Partial<SpringParams> = {}) {}
 	/**
 	 * 设置所有歌词行在​纵坐标上的弹簧属性，包括重量、弹力和阻力。
 	 *
@@ -858,7 +897,7 @@ export abstract class LyricPlayerBase
 		this.interludeDots.update(delta / 1000);
 	}
 
-	protected onResize() { }
+	protected onResize() {}
 
 	/**
 	 * 获取一个特殊的底栏元素，默认是空白的，可以往内部添加任意元素
@@ -931,7 +970,7 @@ export abstract class LyricLineBase extends EventTarget implements Disposable {
 	abstract disable(): void;
 	abstract resume(): void;
 	abstract pause(): void;
-	onLineSizeChange(_size: [number, number]): void { }
+	onLineSizeChange(_size: [number, number]): void {}
 	setTransform(
 		top: number = this.top,
 		scale: number = this.scale,
@@ -967,5 +1006,5 @@ export abstract class LyricLineBase extends EventTarget implements Disposable {
 		);
 	}
 	abstract update(delta?: number): void;
-	dispose() { }
+	dispose() {}
 }
