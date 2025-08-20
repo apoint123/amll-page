@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import type { HTMLProps } from "react";
+import { memo, type HTMLProps } from "react";
 import { MenuButton } from "../MenuButton";
 import { TextMarquee } from "../TextMarquee";
 import styles from "./index.module.css";
@@ -13,7 +13,7 @@ export const MusicInfo: React.FC<
 		onAlbumClicked?: () => void;
 		onMenuButtonClicked?: () => void;
 	} & HTMLProps<HTMLDivElement>
-> = ({
+> = memo(({
 	name,
 	artists,
 	album,
@@ -43,4 +43,4 @@ export const MusicInfo: React.FC<
 			<MenuButton onClick={onMenuButtonClicked} />
 		</div>
 	);
-};
+});

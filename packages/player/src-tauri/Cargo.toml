@@ -87,7 +87,7 @@ opt-level = 1
 [profile.release]
 panic = "abort"
 codegen-units = 1
-lto = true
-opt-level = "s"
+lto = "thin"
+opt-level = "z"
 strip = true
 debug = false

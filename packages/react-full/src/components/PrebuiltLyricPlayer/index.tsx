@@ -225,6 +225,21 @@ const PrebuiltMediaButtons: FC<{
 	);
 };
 
+const TimeLabel: FC<{ isRemaining?: boolean }> = ({ isRemaining }) => {
+	const currentPosition = useAtomValue(correctedMusicPlayingPositionAtom);
+	const duration = useAtomValue(musicDurationAtom);
+	const time = useMemo(() => toDuration(isRemaining
+		? (currentPosition - duration) / 1000
+		: currentPosition / 1000), [currentPosition, duration, isRemaining]);
+	return <>{time}</>;
+};
+
+const TotalDurationLabel: FC = () => {
+	const duration = useAtomValue(musicDurationAtom);
+	const time = useMemo(() => toDuration(duration / 1000), [duration]);
+	return <>{time}</>;
+};
+
 const PrebuiltProgressBar: FC<{ disabled?: boolean }> = React.memo(
 	({ disabled }) => {
 		const musicDuration = useAtomValue(musicDurationAtom);
@@ -253,20 +268,6 @@ const PrebuiltProgressBar: FC<{ disabled?: boolean }> = React.memo(
 		const throttledSeek = useThrottle((position: number) => {
 			onSeekPosition?.(position);
 		}, 100);
-
-		const TimeLabel: FC<{ isRemaining?: boolean }> = ({ isRemaining }) => {
-			const currentPosition = useAtomValue(correctedMusicPlayingPositionAtom);
-			const duration = useAtomValue(musicDurationAtom);
-			const time = isRemaining
-				? (currentPosition - duration) / 1000
-				: currentPosition / 1000;
-			return <>{toDuration(time)}</>;
-		};
-
-		const TotalDurationLabel: FC = () => {
-			const duration = useAtomValue(musicDurationAtom);
-			return <>{toDuration(duration / 1000)}</>;
-		};
 
 		return (
 			<div>
@@ -368,9 +369,9 @@ const PrebuiltCoreLyricPlayer: FC<{
 			...line,
 			words: Array.isArray(line.words)
 				? line.words.map((word: any) => ({
-						...word,
-						obscene: typeof word.obscene === "boolean" ? word.obscene : false,
-					}))
+					...word,
+					obscene: typeof word.obscene === "boolean" ? word.obscene : false,
+				}))
 				: [],
 		}));
 	}, [

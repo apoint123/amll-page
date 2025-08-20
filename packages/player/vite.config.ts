@@ -1,13 +1,14 @@
 import react from "@vitejs/plugin-react";
-import { execSync } from "child_process";
+import { execSync } from "node:child_process";
 import jotaiDebugLabel from "jotai/babel/plugin-debug-label";
 import jotaiReactRefresh from "jotai/babel/plugin-react-refresh";
-import { resolve } from "path";
+import { resolve } from "node:path";
 import { type Plugin, defineConfig } from "vite";
 import i18nextLoader from "vite-plugin-i18next-loader";
 import lightningcss from "vite-plugin-lightningcss";
 import svgr from "vite-plugin-svgr";
 import wasm from "vite-plugin-wasm";
+import MillionLint from "@million/lint";
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -99,6 +100,7 @@ export default defineConfig({
 		sourcemap: "inline",
 	},
 	plugins: [
+		MillionLint.vite(),
 		react({
 			babel: {
 				plugins: [jotaiDebugLabel, jotaiReactRefresh],
