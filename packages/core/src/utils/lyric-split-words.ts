@@ -23,6 +23,7 @@ export function chunkAndSplitLyricWords(
 			if (w.word.startsWith(" ")) {
 				resplitedWords.push({
 					word: " ",
+					romanWord: "",
 					startTime: 0,
 					endTime: 0,
 					obscene: false,
@@ -32,6 +33,7 @@ export function chunkAndSplitLyricWords(
 			for (const s of splited) {
 				const word: LyricWord = {
 					word: s,
+					romanWord: "",
 					obscene: w.obscene,
 					startTime:
 						w.startTime + (charPos / realLength) * (w.endTime - w.startTime),
@@ -42,6 +44,7 @@ export function chunkAndSplitLyricWords(
 				resplitedWords.push(word);
 				resplitedWords.push({
 					word: " ",
+					romanWord: "",
 					startTime: 0,
 					endTime: 0,
 					obscene: false,

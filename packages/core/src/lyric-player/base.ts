@@ -476,10 +476,11 @@ export abstract class LyricPlayerBase
 		}
 
 		this.hasDuetLine = this.processedLines.some((line) => line.isDuet);
-
+		
 		// 将行开始时间提早最多一秒
 		for (let i = this.processedLines.length - 1; i >= 0; i--) {
 			const line = this.processedLines[i];
+			if (line.isBG) continue;
 			const prevLine = this.processedLines[i - 1];
 			if (prevLine) {
 				// 增加一个 min 边界是为了如果现有歌词已经和上一行歌词有交错，则不做修改
@@ -499,25 +500,24 @@ export abstract class LyricPlayerBase
 			const nextLine = this.processedLines[i + 1];
 			if (nextLine?.isBG) {
 				const bgStartTime = Math.min(
-					nextLine.words
+					...nextLine.words
 						.filter((w) => w.word.trim().length > 0)
-						.map((w) => w.startTime)[0] ?? nextLine.startTime,
+						.map((w) => w.startTime),
 					line.startTime,
 				);
 				const bgEndTime = Math.max(
-					nextLine.words
+					...nextLine.words
 						.filter((w) => w.word.trim().length > 0)
-						.map((w) => w.endTime)[0] ?? nextLine.endTime,
+						.map((w) => w.endTime),
 					line.endTime,
 				);
 				const startTime = Math.min(bgStartTime, line.startTime);
 				const endTime = Math.max(bgEndTime, line.endTime);
-				line.startTime = startTime;
-				line.endTime = endTime;
 				nextLine.startTime = startTime;
 				nextLine.endTime = endTime;
 			}
 		}
+
 		for (const line of this.currentLyricLineObjects) {
 			line.dispose();
 		}
@@ -527,7 +527,7 @@ export abstract class LyricPlayerBase
 		this.bufferedLines.clear();
 		this.setCurrentTime(0, true);
 		if (import.meta.env.DEV) {
-			console.log("歌词处理完成", this.processedLines);
+			console.log("歌词处理完成", this);
 		}
 	}
 
