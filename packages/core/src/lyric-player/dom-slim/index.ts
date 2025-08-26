@@ -22,7 +22,7 @@ export class DomSlimLyricPlayer extends LyricPlayerBase {
 
 	private debounceCalcLayout = debounce(
 		() =>
-			this.calcLayout(true, true).then(() =>
+			this.calcLayout(true).then(() =>
 				this.currentLyricLineObjects.map(async (el, i) => {
 					el.markMaskImageDirty("DomLyricPlayer onResize");
 					await el.waitMaskImageUpdated();
@@ -143,7 +143,7 @@ export class DomSlimLyricPlayer extends LyricPlayerBase {
 		this.setLinePosXSpringParams({});
 		this.setLinePosYSpringParams({});
 		this.setLineScaleSpringParams({});
-		this.calcLayout(true, true).then(() => {
+		this.calcLayout(true).then(() => {
 			this.initialLayoutFinished = true;
 		});
 	}
@@ -176,8 +176,8 @@ export class DomSlimLyricPlayer extends LyricPlayerBase {
 		}
 	}
 
-	override async calcLayout(force?: boolean, reflow?: boolean): Promise<void> {
-		await super.calcLayout(force, reflow);
+	override async calcLayout(sync?: boolean): Promise<void> {
+		await super.calcLayout(sync);
 		const curLine = this.currentLyricLineObjects[this.targetAlignIndex];
 		const curLineEl = curLine.getElement();
 		const curLineVisibility = curLineEl.checkVisibility({

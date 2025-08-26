@@ -355,6 +355,7 @@ export class LyricLineEl extends LyricLineBase {
 					},
 					{
 						word: "",
+						romanWord: "",
 						startTime: Number.POSITIVE_INFINITY,
 						endTime: Number.NEGATIVE_INFINITY,
 						wordType: "normal",

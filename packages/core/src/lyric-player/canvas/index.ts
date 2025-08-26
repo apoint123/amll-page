@@ -45,7 +45,7 @@ export class CanvasLyricPlayer extends LyricPlayerBase {
 
 		this.setLinePosYSpringParams({});
 		this.setLineScaleSpringParams({});
-		this.calcLayout(true, true);
+		this.calcLayout(true);
 	}
 	override onResize(): void {
 		const computedStyle = getComputedStyle(this.element);
@@ -61,7 +61,7 @@ export class CanvasLyricPlayer extends LyricPlayerBase {
 			line.relayout();
 		}
 		console.log("CanvasLyricPlayer.onResize", this.size);
-		this.calcLayout(true, true);
+		this.calcLayout(true);
 	}
 	/**
 	 * @internal

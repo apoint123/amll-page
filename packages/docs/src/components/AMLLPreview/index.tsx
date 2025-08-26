@@ -15,6 +15,7 @@ const buildLyricLines = (
 		const endTime = curTime + Number.parseInt(duration);
 		words.push({
 			word: text,
+			romanWord: "",
 			startTime: curTime,
 			endTime,
 			obscene: false,

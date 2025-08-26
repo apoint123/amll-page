@@ -292,7 +292,7 @@ const mapLyric = (
 	_i: number,
 	_lines: RawLyricLine[],
 ): LyricLine => ({
-	words: line.words.map((word) => ({ obscene: false, ...word })),
+	words: line.words.map((word) => ({ obscene: false, romanWord: "", ...word })),
 	startTime: line.words[0]?.startTime ?? 0,
 	endTime:
 		line.words[line.words.length - 1]?.endTime ?? Number.POSITIVE_INFINITY,
@@ -304,7 +304,7 @@ const mapLyric = (
 
 const mapTTMLLyric = (line: RawLyricLine): LyricLine => ({
 	...line,
-	words: line.words.map((word) => ({ obscene: false, ...word })),
+	words: line.words.map((word) => ({ obscene: false, romanWord: "", ...word })),
 	romanLyric: "",
 });
 
@@ -334,6 +334,7 @@ async function loadLyric() {
 				const endTime = curTime + Number.parseInt(duration);
 				words.push({
 					word: text,
+					romanWord: "",
 					startTime: curTime,
 					endTime,
 					obscene: false,
