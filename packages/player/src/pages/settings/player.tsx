@@ -111,7 +111,7 @@ const NumberSettings: FC<
 	{ configAtom: WritableAtom<number, [any], void> } & React.ComponentProps<
 		typeof SettingEntry
 	> &
-	Omit<React.ComponentProps<typeof TextField.Root>, "value" | "onChange">
+		Omit<React.ComponentProps<typeof TextField.Root>, "value" | "onChange">
 > = ({ label, description, configAtom, ...props }) => {
 	const [value, setValue] = useAtom(configAtom);
 	return (
@@ -130,7 +130,7 @@ const SwitchSettings: FC<
 	{ configAtom: WritableAtom<boolean, [any], void> } & React.ComponentProps<
 		typeof SettingEntry
 	> &
-	Omit<SwitchProps, "value" | "onChange">
+		Omit<SwitchProps, "value" | "onChange">
 > = ({ label, description, configAtom }) => {
 	const [value, setValue] = useAtom(configAtom);
 	return (

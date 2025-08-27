@@ -29,7 +29,7 @@
 		"preinstall": "npx only-allow pnpm"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
+		"@biomejs/biome": "catalog:",
 		"typescript": "^5.8.2",
 		"vite": "^6.2.2",
 		"vite-plugin-dts": "^4.3.0"

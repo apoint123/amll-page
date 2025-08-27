@@ -3,7 +3,7 @@
   "private": true,
   "license": "GPL-3.0",
   "devDependencies": {
-    "@biomejs/biome": "^2.0.6",
+		"@biomejs/biome": "catalog:",
     "lerna": "^8.2.3",
     "nx": "^21.2.1",
     "typescript": "^5.8.3"

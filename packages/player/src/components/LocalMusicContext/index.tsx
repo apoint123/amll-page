@@ -181,7 +181,7 @@ function pairLyric(line: LyricLine, lines: CoreLyricLine[], key: TransLine) {
 			if (
 				nearestLine &&
 				Math.abs(nearestLine.startTime - line.words[0].startTime) >
-				Math.abs(coreLine.startTime - line.words[0].startTime)
+					Math.abs(coreLine.startTime - line.words[0].startTime)
 			) {
 				nearestLine = coreLine;
 			} else if (nearestLine === undefined) {
@@ -560,7 +560,10 @@ export const LocalMusicContext: FC = () => {
 				}
 				const imgUrl = URL.createObjectURL(songFromDb.cover);
 				store.set(musicCoverAtom, imgUrl);
-				store.set(musicCoverIsVideoAtom, songFromDb.cover.type.startsWith("video"));
+				store.set(
+					musicCoverIsVideoAtom,
+					songFromDb.cover.type.startsWith("video"),
+				);
 			} else {
 				store.set(musicNameAtom, data.musicInfo.name);
 				store.set(musicAlbumNameAtom, data.musicInfo.album);
@@ -594,7 +597,10 @@ export const LocalMusicContext: FC = () => {
 			}
 			store.set(musicDurationAtom, (data.duration * 1000) | 0);
 		} catch (error) {
-			console.error("[syncMusicInfo] An error occurred during state update:", error);
+			console.error(
+				"[syncMusicInfo] An error occurred during state update:",
+				error,
+			);
 		}
 	};
 
@@ -699,7 +705,10 @@ export const LocalMusicContext: FC = () => {
 			const evtData = evt.payload.data;
 			switch (evtData?.type) {
 				case "playPosition": {
-					store.set(musicPlayingPositionAtom, (evtData.data.position * 1000) | 0);
+					store.set(
+						musicPlayingPositionAtom,
+						(evtData.data.position * 1000) | 0,
+					);
 					break;
 				}
 
@@ -717,7 +726,9 @@ export const LocalMusicContext: FC = () => {
 					await processAndSetPlaylist(status.playlist);
 
 					const currentMusicId = store.get(musicIdAtom);
-					const newMusicId = status.musicId.startsWith("local:") ? status.musicId.substring(6) : status.musicId;
+					const newMusicId = status.musicId.startsWith("local:")
+						? status.musicId.substring(6)
+						: status.musicId;
 					if (newMusicId && newMusicId !== currentMusicId) {
 						await syncMusicInfo(status);
 					}
@@ -753,7 +764,7 @@ export const LocalMusicContext: FC = () => {
 		return () => {
 			unlistenPromise.then((unlisten) => unlisten());
 
-			const doNothing = toEmit(() => { });
+			const doNothing = toEmit(() => {});
 			store.set(onRequestNextSongAtom, doNothing);
 			store.set(onRequestPrevSongAtom, doNothing);
 			store.set(onPlayOrResumeAtom, doNothing);
@@ -776,24 +787,28 @@ export const LocalMusicContext: FC = () => {
 	);
 };
 
-function processAudioQuality(quality: AudioQuality | undefined): MusicQualityState {
+function processAudioQuality(
+	quality: AudioQuality | undefined,
+): MusicQualityState {
 	const definiteQuality = {
 		sampleRate: quality?.sampleRate ?? 0,
 		bitsPerCodedSample: quality?.bitsPerCodedSample ?? 0,
 		bitsPerSample: quality?.bitsPerSample ?? 0,
 		channels: quality?.channels ?? 0,
-		sampleFormat: quality?.sampleFormat ?? 'unknown',
-		codec: quality?.codec ?? 'unknown'
+		sampleFormat: quality?.sampleFormat ?? "unknown",
+		codec: quality?.codec ?? "unknown",
 	};
 
-	if (definiteQuality.codec === 'unknown') {
+	if (definiteQuality.codec === "unknown") {
 		return {
 			...definiteQuality,
-			type: AudioQualityType.None
+			type: AudioQualityType.None,
 		};
 	}
 
-	const isLosslessCodec = ['flac', 'alac', 'ape', 'wav', 'aiff'].includes(definiteQuality.codec.toLowerCase());
+	const isLosslessCodec = ["flac", "alac", "ape", "wav", "aiff"].includes(
+		definiteQuality.codec.toLowerCase(),
+	);
 
 	if (isLosslessCodec) {
 		const sampleRate = definiteQuality.sampleRate;
@@ -802,17 +817,17 @@ function processAudioQuality(quality: AudioQuality | undefined): MusicQualitySta
 		if (sampleRate > 44100 || bitsPerSample > 16) {
 			return {
 				...definiteQuality,
-				type: AudioQualityType.HiResLossless
+				type: AudioQualityType.HiResLossless,
 			};
 		}
 		return {
 			...definiteQuality,
-			type: AudioQualityType.Lossless
+			type: AudioQualityType.Lossless,
 		};
 	}
 
 	return {
 		...definiteQuality,
-		type: AudioQualityType.None
+		type: AudioQualityType.None,
 	};
 }

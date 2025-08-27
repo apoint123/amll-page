@@ -41,7 +41,7 @@
 	"devDependencies": {
 		"@applemusic-like-lyrics/lyric": "^0.2.4",
 		"@applemusic-like-lyrics/ttml": "workspace:^",
-		"@biomejs/biome": "^1.9.4",
+		"@biomejs/biome": "catalog:",
 		"@types/deep-freeze": "^0.1.5",
 		"@types/stats.js": "^0.17.3",
 		"@types/ungap__structured-clone": "^1.2.0",

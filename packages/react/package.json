@@ -35,7 +35,7 @@
 	},
 	"devDependencies": {
 		"@applemusic-like-lyrics/lyric": "workspace:^",
-		"@biomejs/biome": "^1.9.4",
+		"@biomejs/biome": "catalog:",
 		"@pixi/app": "^7.4.3",
 		"@pixi/core": "^7.4.3",
 		"@pixi/display": "^7.4.3",

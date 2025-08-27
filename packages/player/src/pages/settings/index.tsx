@@ -10,7 +10,16 @@ import {
 	TextAlignJustifyIcon,
 	HamburgerMenuIcon,
 } from "@radix-ui/react-icons";
-import { Box, Button, Dialog, Flex, Heading, Separator, Text, Tooltip } from "@radix-ui/themes";
+import {
+	Box,
+	Button,
+	Dialog,
+	Flex,
+	Heading,
+	Separator,
+	Text,
+	Tooltip,
+} from "@radix-ui/themes";
 import { platform } from "@tauri-apps/plugin-os";
 import { atom, useAtom, useAtomValue } from "jotai";
 import {
@@ -70,7 +79,9 @@ const SidebarButton: FC<{
 	);
 };
 
-const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({ onNavigate }) => {
+const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({
+	onNavigate,
+}) => {
 	const os = usePlatform();
 	const [currentPage] = useAtom(currentPageAtom);
 	const loadedExtensions = useAtomValue(loadedExtensionsWithSettingsAtom);
@@ -151,7 +162,13 @@ const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({ onNaviga
 				return (
 					<SidebarButton
 						key={`extension.${id}`}
-						icon={<img src={String(extension.context.extensionMeta.icon)} width="20" height="20" />}
+						icon={
+							<img
+								src={String(extension.context.extensionMeta.icon)}
+								width="20"
+								height="20"
+							/>
+						}
 						label={i18n.getFixedT(null, id as any)("name", id)}
 						isActive={currentPage === `extension.${id}`}
 						onClick={() => onNavigate(`extension.${id}`)}
@@ -271,7 +288,7 @@ export const Component: FC = () => {
 
 			<Dialog.Root open={isMenuOpen} onOpenChange={setMenuOpen}>
 				<Dialog.Content className={styles.dialogContent}>
-					<Heading mb="4">{t('common.settings', '设置')}</Heading>
+					<Heading mb="4">{t("common.settings", "设置")}</Heading>
 					<SidebarContent onNavigate={handleNavigate} />
 				</Dialog.Content>
 			</Dialog.Root>
@@ -318,7 +335,7 @@ export const Component: FC = () => {
 					<SidebarContent onNavigate={handleNavigate} />
 				</Box>
 				<Box className={styles.contentArea}>
-					<div style={{ height: 'var(--space-4)' }} />
+					<div style={{ height: "var(--space-4)" }} />
 					{renderContent()}
 				</Box>
 			</Flex>
