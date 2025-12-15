@@ -1,4 +1,9 @@
 import {
+	musicArtistsAtom,
+	musicCoverAtom,
+	musicNameAtom,
+} from "@applemusic-like-lyrics/react-full";
+import {
 	ArrowLeftIcon,
 	Pencil1Icon,
 	PlayIcon,
@@ -16,6 +21,7 @@ import {
 } from "@radix-ui/themes";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion, useMotionTemplate, useScroll } from "framer-motion";
+import { useSetAtom } from "jotai";
 import jsmediatags from "jsmediatags";
 import md5 from "md5";
 import { type FC, useCallback, useMemo, useRef, useState } from "react";
@@ -100,6 +106,10 @@ export const Component: FC = () => {
 	});
 	const playlistCoverSize = useMotionTemplate`clamp(6em,calc(12em - ${playlistViewScroll.scrollY}px),12em)`;
 	const playlistInfoGapSize = useMotionTemplate`clamp(var(--space-1), calc(var(--space-4) - ${playlistViewScroll.scrollY}px / 5), var(--space-4))`;
+
+	const setMusicName = useSetAtom(musicNameAtom);
+	const setMusicArtists = useSetAtom(musicArtistsAtom);
+	const setMusicCover = useSetAtom(musicCoverAtom);
 
 	const onAddLocalMusics = useCallback(async () => {
 		const input = document.createElement("input");
@@ -240,10 +250,16 @@ export const Component: FC = () => {
 			const file = new File([song.file], song.filePath, {
 				type: song.file.type,
 			});
+			setMusicName(song.songName);
+			setMusicArtists(
+				song.songArtists.split(",").map((v) => ({ name: v, id: v })),
+			);
+			setMusicCover(URL.createObjectURL(song.cover));
+
 			await webPlayer.load(file);
 			webPlayer.play();
 		},
-		[playlist],
+		[playlist, setMusicArtists, setMusicCover, setMusicName],
 	);
 
 	const onDeleteSong = useCallback(
