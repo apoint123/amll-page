@@ -19,6 +19,7 @@ export interface Song {
 	songArtists: string;
 	songAlbum: string;
 	cover: Blob;
+	file: Blob;
 	cachedThumbnail?: Blob;
 	duration: number;
 	lyricFormat: string;
@@ -43,24 +44,4 @@ db.version(1).stores({
 	playlists: "++id,name,createTime,updateTime,playTime",
 	songs: "&id,filePath,songName,songArtists",
 	ttmlDB: "&name",
-});
-
-db.version(2).upgrade((trans) => {
-	trans
-		.table("songs")
-		.toCollection()
-		.modify((song) => {
-			const raw = Uint8Array.from(atob(song.cover), (c) => c.charCodeAt(0));
-			song.cover = new Blob([raw], { type: "image" });
-		});
-});
-
-db.version(3).upgrade((trans) => {
-	trans
-		.table("songs")
-		.toCollection()
-		.modify((song) => {
-			song.songAlbum = "";
-			song.lyricFormat = "";
-		});
 });

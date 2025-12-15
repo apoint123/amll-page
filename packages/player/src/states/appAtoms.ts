@@ -1,5 +1,3 @@
-type Update = any;
-
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 

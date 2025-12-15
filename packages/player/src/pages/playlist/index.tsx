@@ -125,62 +125,63 @@ export const Component: FC = () => {
 			let success = 0;
 			let errored = 0;
 
-			const transformed = (
-				await Promise.all(
-					files.map(async (file) => {
-						try {
-							const tags = await new Promise<any>((resolve, reject) => {
-								jsmediatags.read(file, {
-									onSuccess: resolve,
-									onError: reject,
-								});
+			const transformed = await Promise.all(
+				files.map(async (file): Promise<Song | null> => {
+					try {
+						const tags = await new Promise<any>((resolve, reject) => {
+							jsmediatags.read(file, {
+								onSuccess: resolve,
+								onError: reject,
 							});
+						});
 
-							const { title, artist, album, picture } = tags.tags;
-							const pathMd5 = md5(file.name + file.size); // Simple unique ID
+						const { title, artist, album, picture } = tags.tags;
+						const pathMd5 = md5(file.name + file.size); // Simple unique ID
 
-							const coverBlob = picture
-								? new Blob([new Uint8Array(picture.data)], {
-										type: picture.format,
-									})
-								: new Blob([await file.arrayBuffer()], { type: file.type });
+						const coverBlob = picture
+							? new Blob([new Uint8Array(picture.data)], {
+									type: picture.format,
+								})
+							: new Blob([], { type: "image/png" });
 
-							success += 1;
-							return {
-								id: pathMd5,
-								filePath: file.name, // Using file name as a placeholder
-								songName: title || file.name,
-								songArtists: artist || "Unknown Artist",
-								songAlbum: album || "Unknown Album",
-								lyricFormat: "none",
-								lyric: "",
-								cover: coverBlob,
-								duration: 0, // Duration will be read by the player
-							} satisfies Song;
-						} catch (err) {
-							errored += 1;
-							console.warn("解析歌曲元数据以添加歌曲失败", file.name, err);
-							return null;
-						} finally {
-							current += 1;
-							toast.update(id, {
-								render: t(
-									"page.playlist.addLocalMusic.toast.parsingMusicMetadata",
-									"正在解析音乐元数据以添加歌曲 ({current, plural, other {#}} / {total, plural, other {#}})",
-									{
-										current: current,
-										total: files.length,
-									},
-								),
-								progress: current / files.length,
-							});
-						}
-					}),
-				)
-			).filter((v): v is Song => !!v);
+						success += 1;
+						return {
+							id: pathMd5,
+							filePath: file.name, // Using file name as a placeholder
+							songName: title || file.name,
+							songArtists: artist || "Unknown Artist",
+							songAlbum: album || "Unknown Album",
+							lyricFormat: "none",
+							lyric: "",
+							cover: coverBlob,
+							file: file,
+							duration: 0, // Duration will be read by the player
+						};
+					} catch (err) {
+						errored += 1;
+						console.warn("解析歌曲元数据以添加歌曲失败", file.name, err);
+						return null;
+					} finally {
+						current += 1;
+						toast.update(id, {
+							render: t(
+								"page.playlist.addLocalMusic.toast.parsingMusicMetadata",
+								"正在解析音乐元数据以添加歌曲 ({current, plural, other {#}} / {total, plural, other {#}})",
+								{
+									current: current,
+									total: files.length,
+								},
+							),
+							progress: current / files.length,
+						});
+					}
+				}),
+			);
 
-			await db.songs.bulkPut(transformed);
-			const shouldAddIds = transformed
+			const validSongs = transformed.filter((v): v is Song => v !== null);
+
+			await db.songs.bulkPut(validSongs);
+			const shouldAddIds = validSongs
 				.map((v) => v.id)
 				.filter((v) => !playlist?.songIds.includes(v))
 				.reverse();
@@ -231,13 +232,13 @@ export const Component: FC = () => {
 			if (!songId) return;
 
 			const song = await db.songs.get(songId);
-			if (!song || !(song.cover instanceof Blob)) {
+			if (!song || !(song.file instanceof Blob)) {
 				toast.error("无法播放，找不到歌曲文件。");
 				return;
 			}
 
-			const file = new File([song.cover], song.filePath, {
-				type: song.cover.type,
+			const file = new File([song.file], song.filePath, {
+				type: song.file.type,
 			});
 			await webPlayer.load(file);
 			webPlayer.play();

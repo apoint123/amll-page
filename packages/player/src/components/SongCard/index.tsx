@@ -55,8 +55,11 @@ export const SongCard = forwardRef<
 				<ContextMenu.Content>
 					<ContextMenu.Item
 						onClick={async () => {
-							if (song.cover instanceof File) {
-								await webPlayer.load(song.cover);
+							if (song.file instanceof Blob) {
+								const file = new File([song.file], song.filePath, {
+									type: song.file.type,
+								});
+								await webPlayer.load(file);
 								webPlayer.play();
 							}
 						}}
