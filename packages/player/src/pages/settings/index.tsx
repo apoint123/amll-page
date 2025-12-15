@@ -196,7 +196,7 @@ export const Component: FC = () => {
 
 	const renderContent = () => {
 		if (currentPage.startsWith("player.")) {
-			const category = currentPage.split(".")[0];
+			const category = currentPage.split(".")[1];
 			return <PlayerSettingsTab category={category} />;
 		}
 
