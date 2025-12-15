@@ -15,7 +15,7 @@ catalog:
   typedoc: ^0.28.13
   typedoc-plugin-markdown: ^4.9.0
   typescript: ^5.9.3
-  vite: ^7.1.11
+  vite: ^6.4.1
   vite-plugin-dts: ^4.5.4
   vite-plugin-svgr: ^4.5.0
   vite-plugin-wasm: ^3.5.0
