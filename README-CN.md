@@ -18,6 +18,8 @@
 /
 [AMLL TTML Tool 逐词歌词编辑器](https://github.com/Steve-xmh/amll-ttml-tool)
 
+[引用了 AMLL 的项目汇总](https://github.com/Steve-xmh/applemusic-like-lyrics/discussions/397)
+
 </div>
 
 ## AMLL 生态及源码结构
