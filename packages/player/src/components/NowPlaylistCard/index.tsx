@@ -1,5 +1,10 @@
+import {
+	currentPlaylistAtom,
+	currentPlaylistMusicIndexAtom,
+} from "@applemusic-like-lyrics/react-full";
 import { PlayIcon } from "@radix-ui/react-icons";
 import { Avatar, Box, Flex, type FlexProps, Inset } from "@radix-ui/themes";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAtomValue } from "jotai";
 import {
 	type FC,
@@ -11,18 +16,13 @@ import {
 	useState,
 } from "react";
 import { Trans } from "react-i18next";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { db, type Song } from "../../dexie.ts";
-import { type SongData, emitAudioThread } from "../../utils/player.ts";
+import { webPlayer } from "../../utils/web-player.ts";
 import styles from "./index.module.css";
-import {
-	currentPlaylistMusicIndexAtom,
-	currentPlaylistAtom,
-} from "@applemusic-like-lyrics/react-full";
 
 const PlaylistSongItem: FC<
 	{
-		songData: SongData;
+		songData: any;
 		index: number;
 	} & HTMLProps<HTMLDivElement>
 > = ({ songData, className, index, ...props }) => {
@@ -74,10 +74,17 @@ const PlaylistSongItem: FC<
 			<button
 				type="button"
 				className={styles.playlistSongItem}
-				onDoubleClick={() => {
-					emitAudioThread("jumpToSong", {
-						songIndex: index,
-					});
+				onDoubleClick={async () => {
+					if (song) {
+						const songFile = await db.songs.get(song.id);
+						if (songFile?.cover instanceof Blob) {
+							const file = new File([songFile.cover], song.filePath, {
+								type: songFile.cover.type,
+							});
+							await webPlayer.load(file);
+							webPlayer.play();
+						}
+					}
 				}}
 				aria-label={`播放 ${name} - ${artists}`}
 			>

@@ -3,9 +3,9 @@ import { chunkAndSplitLyricWords } from "../../utils/lyric-split-words.ts";
 import { LyricLineBase } from "../base.ts";
 import type { CanvasLyricPlayer } from "./index.ts";
 import {
+	layoutLine,
 	type TextLayoutConfig,
 	type TextLayoutResult,
-	layoutLine,
 } from "./text-layout";
 
 export class CanvasLyricLine extends LyricLineBase {
@@ -135,8 +135,13 @@ export class CanvasLyricLine extends LyricLineBase {
 			);
 		}
 	}
-	override enable(): void {}
-	override disable(): void {}
+	private enabled = false;
+	override enable(): void {
+		this.enabled = true;
+	}
+	override disable(): void {
+		this.enabled = false;
+	}
 	override resume(): void {}
 	override pause(): void {}
 	override setTransform(

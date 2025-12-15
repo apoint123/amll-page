@@ -2,8 +2,25 @@
 /// <reference types="vite-plugin-svgr/client" />
 /// <reference types="vite-plugin-i18next-loader/vite" />
 
+declare module "jsmediatags" {
+	export function read(
+		file: File,
+		callbacks: {
+			onSuccess: (tag: any) => void;
+			onError: (error: any) => void;
+		},
+	): void;
+}
+
 declare module "md5" {
-	export default function md5(input: string): string;
+	export default function md5(message: string | Buffer): string;
+}
+
+declare module "*.svg?react" {
+	import React = require("react");
+	export const ReactComponent: React.FC<React.SVGProps<SVGSVGElement>>;
+	const src: string;
+	export default src;
 }
 
 declare module "virtual:git-metadata-plugin" {
@@ -48,34 +65,3 @@ declare module "virtual:i18next-loader" {
 	};
 	export default resources;
 }
-
-declare enum SystemTitlebarAppearance {
-	Windows = "windows",
-	MacOS = "macos",
-	Hidden = "hidden",
-}
-
-declare function setSystemTitlebarAppearance(
-	appearance: SystemTitlebarAppearance,
-): void;
-declare enum SystemTitlebarResizeAppearance {
-	Restore = "restore",
-	Maximize = "maximize",
-}
-declare function setSystemTitlebarResizeAppearance(
-	appearance: SystemTitlebarResizeAppearance,
-): void;
-declare function setSystemTitlebarFullscreen(enable: boolean): void;
-declare function setSystemTitlebarImmersiveMode(enable: boolean): void;
-declare function addEventListener(
-	type: "on-system-titlebar-click-close",
-	listener: (evt: Event) => void,
-): void;
-declare function addEventListener(
-	type: "on-system-titlebar-click-resize",
-	listener: (evt: Event) => void,
-): void;
-declare function addEventListener(
-	type: "on-system-titlebar-click-minimize",
-	listener: (evt: Event) => void,
-): void;

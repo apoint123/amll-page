@@ -4,11 +4,16 @@ import {
 	onRequestNextSongAtom,
 	onRequestPrevSongAtom,
 } from "@applemusic-like-lyrics/react-full";
-import {
-	type ShortcutEvent,
-	register,
-	unregister,
-} from "@tauri-apps/plugin-global-shortcut";
+
+// import {
+// 	type ShortcutEvent,
+// 	register,
+// 	unregister,
+// } from "@tauri-apps/plugin-global-shortcut";
+const register = (..._args: any[]) => {};
+const unregister = (..._args: any[]) => {};
+type ShortcutEvent = any;
+
 import type { Atom } from "jotai";
 import { useAtomValue } from "jotai";
 import { type FC, useEffect } from "react";

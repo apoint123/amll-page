@@ -10,27 +10,27 @@ import {
 	Text,
 } from "@radix-ui/themes";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { platform } from "@tauri-apps/plugin-os";
+
+// import { platform } from "@tauri-apps/plugin-os";
+const platform = () => "web";
+
 import { useLiveQuery } from "dexie-react-hooks";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom } from "jotai";
 import { type FC, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { ExtensionInjectPoint } from "../../components/ExtensionInjectPoint/index.tsx";
 import { NewPlaylistButton } from "../../components/NewPlaylistButton/index.tsx";
 import { PageContainer } from "../../components/PageContainer/index.tsx";
 import { PlaylistCard } from "../../components/PlaylistCard/index.tsx";
 import { db } from "../../dexie.ts";
 import { router } from "../../router.tsx";
 import {
-	updateInfoAtom,
-	musicContextModeAtom,
 	MusicContextMode,
+	musicContextModeAtom,
 } from "../../states/appAtoms.ts";
 
 export const Component: FC = () => {
 	const playlists = useLiveQuery(() => db.playlists.toArray());
-	const updateInfo = useAtomValue(updateInfoAtom);
 	const parentRef = useRef<HTMLDivElement>(null);
 
 	const [musicContextMode, setMusicContextMode] = useAtom(musicContextModeAtom);
@@ -58,21 +58,6 @@ export const Component: FC = () => {
 					<Box asChild flexGrow="1">
 						<Heading wrap="nowrap" my="4">
 							AMLL Player
-							{updateInfo && (
-								<Badge
-									onClick={() => router.navigate("/settings#updater")}
-									radius="full"
-									style={{
-										cursor: "pointer",
-									}}
-									color="indigo"
-									ml="2"
-								>
-									<Trans i18nKey="page.main.updateAvailableTag">
-										有可用更新
-									</Trans>
-								</Badge>
-							)}
 							{isSystemListenerMode && (
 								<Badge
 									radius="full"
@@ -87,7 +72,6 @@ export const Component: FC = () => {
 						</Heading>
 					</Box>
 					<Flex gap="1" wrap="wrap">
-						<ExtensionInjectPoint injectPointName="page.main.sidebar.before" />
 						<IconButton variant="soft" asChild>
 							<Link to="/search">
 								<MagnifyingGlassIcon />
@@ -101,8 +85,6 @@ export const Component: FC = () => {
 								</IconButton>
 							</DropdownMenu.Trigger>
 							<DropdownMenu.Content>
-								<ExtensionInjectPoint injectPointName="page.main.menu.top" />
-
 								{currentPlatform === "windows" && (
 									<DropdownMenu.Item
 										color={isSystemListenerMode ? "green" : undefined}
@@ -147,14 +129,10 @@ export const Component: FC = () => {
 										<Trans i18nKey="page.main.menu.settings">设置</Trans>
 									</Link>
 								</DropdownMenu.Item>
-								<ExtensionInjectPoint injectPointName="page.main.menu.bottom" />
 							</DropdownMenu.Content>
 						</DropdownMenu.Root>
-						<ExtensionInjectPoint injectPointName="page.main.sidebar.after" />
 					</Flex>
 				</Flex>
-
-				<ExtensionInjectPoint injectPointName="page.main.top" />
 
 				{playlists !== undefined ? (
 					playlists.length === 0 ? (
@@ -213,7 +191,6 @@ export const Component: FC = () => {
 						<Trans i18nKey="page.main.loadingPlaylist">加载歌单中</Trans>
 					</Flex>
 				)}
-				<ExtensionInjectPoint injectPointName="page.main.bottom" />
 			</Flex>
 		</PageContainer>
 	);

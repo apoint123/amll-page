@@ -1,9 +1,10 @@
 import { musicQualityAtom } from "@applemusic-like-lyrics/react-full";
 import { Button, DataList, Dialog, Separator } from "@radix-ui/themes";
-import { useAtom, useAtomValue } from "jotai";
+import { atom, useAtom, useAtomValue } from "jotai";
 import type { FC } from "react";
 import { Trans } from "react-i18next";
-import { audioQualityDialogOpenedAtom } from "../../states/smtcAtoms";
+
+const audioQualityDialogOpenedAtom = atom(false);
 
 export const AudioQualityDialog: FC = () => {
 	const [audioQualityDialogOpened, setAudioQualityDialogOpened] = useAtom(

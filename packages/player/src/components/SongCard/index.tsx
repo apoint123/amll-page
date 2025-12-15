@@ -1,11 +1,11 @@
 import { toDuration } from "@applemusic-like-lyrics/react-full";
 import { Avatar, Box, Card, ContextMenu, Flex, Text } from "@radix-ui/themes";
-import { type CSSProperties, type PropsWithChildren, forwardRef } from "react";
+import { type CSSProperties, forwardRef, type PropsWithChildren } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import type { Song } from "../../dexie.ts";
 import { router } from "../../router.tsx";
-import { emitAudioThread } from "../../utils/player.ts";
 import { useSongCover } from "../../utils/use-song-cover.ts";
+import { webPlayer } from "../../utils/web-player.ts";
 
 export const SongCard = forwardRef<
 	HTMLDivElement,
@@ -55,16 +55,10 @@ export const SongCard = forwardRef<
 				<ContextMenu.Content>
 					<ContextMenu.Item
 						onClick={async () => {
-							await emitAudioThread("setPlaylist", {
-								songs: [
-									{
-										type: "local",
-										filePath: song.filePath,
-										origOrder: 0,
-									},
-								],
-							});
-							await emitAudioThread("nextSong");
+							if (song.cover instanceof File) {
+								await webPlayer.load(song.cover);
+								webPlayer.play();
+							}
 						}}
 					>
 						<Trans i18nKey="amll.contextMenu.play">播放</Trans>

@@ -7,8 +7,6 @@ import {
 	onRequestPrevSongAtom,
 } from "@applemusic-like-lyrics/react-full";
 import { ContextMenu } from "@radix-ui/themes";
-import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import type { FC } from "react";
 import { Trans } from "react-i18next";
@@ -36,18 +34,6 @@ export const AMLLContextMenuContent: FC = () => {
 				<Trans i18nKey="amll.contextMenu.forwardSong">下一首</Trans>
 			</ContextMenu.Item>
 			<ContextMenu.Separator />
-			<ContextMenu.Item
-				onClick={async () => {
-					const win = getCurrentWindow();
-					const isFullscreen = await win.isFullscreen();
-					setSystemTitlebarFullscreen(!isFullscreen);
-					await win.setFullscreen(!isFullscreen);
-				}}
-			>
-				<Trans i18nKey="amll.contextMenu.toggleFullscreen">
-					全屏 / 取消全屏
-				</Trans>
-			</ContextMenu.Item>
 			<ContextMenu.Separator />
 			<ContextMenu.CheckboxItem
 				checked={!hideLyricView}
@@ -72,15 +58,6 @@ export const AMLLContextMenuContent: FC = () => {
 				}}
 			>
 				<Trans i18nKey="amll.contextMenu.openRecorder">打开捕获面板</Trans>
-			</ContextMenu.Item>
-			<ContextMenu.Item
-				onClick={() => {
-					invoke("open_screenshot_window");
-				}}
-			>
-				<Trans i18nKey="amll.contextMenu.openScreenshotTool">
-					打开截图工具
-				</Trans>
 			</ContextMenu.Item>
 			<ContextMenu.Separator />
 			<ContextMenu.Item

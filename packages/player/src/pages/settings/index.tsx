@@ -16,36 +16,25 @@ import {
 	Dialog,
 	Flex,
 	Heading,
-	Separator,
 	Text,
 	Tooltip,
 } from "@radix-ui/themes";
-import { platform } from "@tauri-apps/plugin-os";
-import type { Namespace } from "i18next";
-import { atom, useAtom, useAtomValue } from "jotai";
+import { atom, useAtom } from "jotai";
 import {
 	type FC,
 	type ReactNode,
-	Suspense,
 	useEffect,
 	useMemo,
 	useRef,
 	useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { loadedExtensionAtom } from "../../states/extensionsAtoms.ts";
-import { ExtensionTab } from "./extension.tsx";
 import styles from "./index.module.css";
 import { PlayerSettingsTab } from "./player.tsx";
 
-const currentPageAtom = atom("player.general");
+const platform = () => "web";
 
-const loadedExtensionsWithSettingsAtom = atom((get) => {
-	const loadedExtensions = get(loadedExtensionAtom);
-	return loadedExtensions.filter(
-		(v) => v.context.registeredInjectPointComponent.settings,
-	);
-});
+const currentPageAtom = atom("player.general");
 
 const usePlatform = () => {
 	const [os, setOs] = useState<string | null>(null);
@@ -85,8 +74,7 @@ const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({
 }) => {
 	const os = usePlatform();
 	const [currentPage] = useAtom(currentPageAtom);
-	const loadedExtensions = useAtomValue(loadedExtensionsWithSettingsAtom);
-	const { t, i18n } = useTranslation();
+	const { t } = useTranslation();
 
 	const playerSettingsPages = useMemo(() => {
 		const pages = [
@@ -150,41 +138,12 @@ const SidebarContent: FC<{ onNavigate: (pageId: string) => void }> = ({
 					onClick={() => onNavigate(`player.${page.id}`)}
 				/>
 			))}
-			<Separator my="2" size="4" />
-			<SidebarButton
-				key="extension.management"
-				icon={<Component1Icon width={20} height={20} />}
-				label={t("settings.extension.tab", "扩展程序管理")}
-				isActive={currentPage === "extension.management"}
-				onClick={() => onNavigate("extension.management")}
-			/>
-			{loadedExtensions.map((extension) => {
-				const id = extension.extensionMeta.id;
-				const extensionName = i18n.getFixedT(null, id as Namespace)("name", id);
-				return (
-					<SidebarButton
-						key={`extension.${id}`}
-						icon={
-							<img
-								src={String(extension.context.extensionMeta.icon)}
-								width="20"
-								height="20"
-								alt={extensionName}
-							/>
-						}
-						label={extensionName}
-						isActive={currentPage === `extension.${id}`}
-						onClick={() => onNavigate(`extension.${id}`)}
-					/>
-				);
-			})}
 		</Flex>
 	);
 };
 
 export const Component: FC = () => {
 	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
-	const loadedExtensions = useAtomValue(loadedExtensionsWithSettingsAtom);
 	const { t } = useTranslation();
 
 	const buttonContainerRef = useRef<HTMLDivElement>(null);
@@ -237,29 +196,8 @@ export const Component: FC = () => {
 
 	const renderContent = () => {
 		if (currentPage.startsWith("player.")) {
-			const category = currentPage.split(".")[1];
+			const category = currentPage.split(".")[0];
 			return <PlayerSettingsTab category={category} />;
-		}
-
-		if (currentPage === "extension.management") {
-			return (
-				<Suspense>
-					<ExtensionTab />
-				</Suspense>
-			);
-		}
-
-		if (currentPage.startsWith("extension.")) {
-			const extensionId = currentPage.substring(10);
-			const extension = loadedExtensions.find(
-				(ext) => ext.extensionMeta.id === extensionId,
-			);
-			const ExtensionSettingsComponent =
-				extension?.context.registeredInjectPointComponent.settings;
-
-			if (ExtensionSettingsComponent) {
-				return <ExtensionSettingsComponent />;
-			}
 		}
 
 		return null;

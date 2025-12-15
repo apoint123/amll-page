@@ -1,4 +1,3 @@
-import { branch, commit } from "virtual:git-metadata-plugin";
 import {
 	CanvasLyricPlayer,
 	DomLyricPlayer,
@@ -46,7 +45,6 @@ import {
 	Card,
 	Flex,
 	Select,
-	Separator,
 	Slider,
 	type SliderProps,
 	Switch,
@@ -55,41 +53,30 @@ import {
 	TextField,
 	type TextProps,
 } from "@radix-ui/themes";
-import { getVersion } from "@tauri-apps/api/app";
-import { invoke } from "@tauri-apps/api/core";
 import { atom, useAtom, useAtomValue, type WritableAtom } from "jotai";
 import { loadable } from "jotai/utils";
 import React, {
 	type FC,
 	type PropsWithChildren,
 	type ReactNode,
-	Suspense,
 	useLayoutEffect,
 	useMemo,
 	useState,
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { toast } from "react-toastify";
 import { router } from "../../router.tsx";
 import {
 	advanceLyricDynamicLyricTimeAtom,
 	DarkMode,
 	darkModeAtom,
-	enableMediaControlsAtom,
-	enableWsLyricsInSmtcModeAtom,
 	showStatJSFrameAtom,
-	updateInfoAtom,
 } from "../../states/appAtoms.ts";
-import {
-	type SmtcSession,
-	smtcSelectedSessionIdAtom,
-	smtcSessionsAtom,
-	smtcTextConversionModeAtom,
-	smtcTimeOffsetAtom,
-	TextConversionMode,
-} from "../../states/smtcAtoms.ts";
-import { restartApp } from "../../utils/player.ts";
 import styles from "./index.module.css";
+
+const restartApp = () => window.location.reload();
+const getVersion = () => Promise.resolve("0.0.0-web");
+const branch = "web";
+const commit = "unknown";
 
 const SettingEntry: FC<
 	PropsWithChildren<{ label: string; description?: string }>
@@ -1060,17 +1047,6 @@ const OthersSettings = () => {
 				)}
 				configAtom={showStatJSFrameAtom}
 			/>
-			<SwitchSettings
-				label={t(
-					"page.settings.smtc.enableMediaControls.label",
-					"启用内置播放器的媒体控件",
-				)}
-				description={t(
-					"page.settings.smtc.enableMediaControls.description",
-					"目前只支持 Windows 的 SMTC",
-				)}
-				configAtom={enableMediaControlsAtom}
-			/>
 			<Button my="2" onClick={() => restartApp()}>
 				<Trans i18nKey="page.settings.others.restartProgram">重启程序</Trans>
 			</Button>
@@ -1090,10 +1066,7 @@ const OthersSettings = () => {
 };
 
 const AboutSettings = () => {
-	const { t } = useTranslation();
-	const updateInfo = useAtomValue(updateInfoAtom);
 	const appVersion = useAtomValue(appVersionAtom);
-	const [updating, setUpdating] = useState(false);
 
 	return (
 		<>
@@ -1111,286 +1084,6 @@ const AboutSettings = () => {
 					由 SteveXMH 及其所有 Github 协作者共同开发
 				</Trans>
 			</Text>
-			<Suspense>
-				{updateInfo && (
-					<>
-						<Separator size="4" my="3" />
-						<div id="updater">
-							{t(
-								"page.about.newVersion",
-								"有可用更新从 {currentVersion} 升级至 {nextVersion}",
-								{
-									currentVersion: updateInfo.currentVersion,
-									nextVersion: updateInfo.version,
-								},
-							)}
-						</div>
-						<div
-							style={{
-								margin: "1em 0",
-								whiteSpace: "pre-wrap",
-							}}
-						>
-							{updateInfo.body}
-						</div>
-						<Button
-							disabled={updating}
-							loading={updating}
-							onClick={() => {
-								setUpdating(true);
-								const toastId = toast.loading(
-									t(
-										"page.about.updating",
-										"正在更新，完成后将会自动重启，请稍后……",
-									),
-								);
-								let contentLength: number | undefined;
-								let receivedLength = 0;
-								function getProgressSizeText() {
-									const rec = `${(receivedLength / 1024 / 1024).toFixed(2)} MiB`;
-									if (contentLength === undefined) {
-										return `(${rec})`;
-									}
-									const total = `${(contentLength / 1024 / 1024).toFixed(
-										2,
-									)} MiB`;
-									return `(${rec} / ${total}) (${(
-										(receivedLength / contentLength) * 100
-									).toFixed(1)}%)`;
-								}
-								const getDownloadMessage = (progressText: string) =>
-									t("page.about.downloading", "正在下载更新…… {progressText}", {
-										progressText,
-									});
-								updateInfo.downloadAndInstall((evt) => {
-									switch (evt.event) {
-										case "Started": {
-											contentLength = evt.data.contentLength;
-											toast.update(toastId, {
-												render: getDownloadMessage(getProgressSizeText()),
-											});
-											break;
-										}
-										case "Progress": {
-											receivedLength += evt.data.chunkLength;
-											toast.update(toastId, {
-												render: getDownloadMessage(getProgressSizeText()),
-												progress:
-													contentLength === undefined
-														? null
-														: receivedLength / contentLength,
-											});
-											break;
-										}
-										case "Finished":
-											toast.update(toastId, {
-												render: t(
-													"page.about.installing",
-													"正在安装更新，将会自动重启，请稍后……",
-												),
-												progress: null,
-											});
-											setTimeout(restartApp, 1000);
-											break;
-									}
-								});
-							}}
-						>
-							<Trans i18nKey="page.about.installUpdate">更新并安装</Trans>
-						</Button>
-						<Box mb="3" />
-					</>
-				)}
-			</Suspense>
-		</>
-	);
-};
-
-const SmtcSettings = () => {
-	const { t } = useTranslation();
-	const sessions = useAtomValue(smtcSessionsAtom);
-	const [selectedSession, setSelectedSession] = useAtom(
-		smtcSelectedSessionIdAtom,
-	);
-	const [textConversion, setTextConversion] = useAtom(
-		smtcTextConversionModeAtom,
-	);
-
-	const handleForceUpdateClick = () => {
-		invoke("request_smtc_update").catch((err) => {
-			console.error("手动调用 request_smtc_update 失败:", err);
-		});
-	};
-
-	const sessionMenu = useMemo(
-		() => [
-			{ label: t("page.settings.smtc.session.auto"), value: "null" },
-			...(sessions || []).map((s: SmtcSession) => ({
-				label: s.displayName,
-				value: s.sessionId,
-			})),
-		],
-		[t, sessions],
-	);
-
-	const textConversionMenu = useMemo(
-		() => [
-			{
-				label: t("page.settings.smtc.textConversion.off"),
-				value: TextConversionMode.Off,
-			},
-			{
-				label: t("page.settings.smtc.textConversion.t2s"),
-				value: TextConversionMode.TraditionalToSimplified,
-			},
-			{
-				label: t("page.settings.smtc.textConversion.s2t"),
-				value: TextConversionMode.SimplifiedToTraditional,
-			},
-			{
-				label: t("page.settings.smtc.textConversion.s2tw"),
-				value: TextConversionMode.SimplifiedToTaiwan,
-			},
-			{
-				label: t("page.settings.smtc.textConversion.tw2s"),
-				value: TextConversionMode.TaiwanToSimplified,
-			},
-			{
-				label: t("page.settings.smtc.textConversion.s2hk"),
-				value: TextConversionMode.SimplifiedToHongKong,
-			},
-			{
-				label: t("page.settings.smtc.textConversion.hk2s"),
-				value: TextConversionMode.HongKongToSimplified,
-			},
-		],
-		[t],
-	);
-
-	const handleSessionChange = (value: string) => {
-		const finalValue = value === "null" ? null : value;
-		setSelectedSession(finalValue);
-
-		if (finalValue) {
-			localStorage.setItem("saved_smtc_session_id", finalValue);
-		} else {
-			localStorage.removeItem("saved_smtc_session_id");
-		}
-
-		invoke("control_external_media", {
-			payload: { type: "selectSession", session_id: finalValue ?? "" },
-		}).catch((err) => {
-			console.error(err);
-			toast.error(t("page.settings.smtc.session.changeFailed", { error: err }));
-		});
-	};
-
-	const handleTextConversionChange = (value: TextConversionMode) => {
-		setTextConversion(value);
-
-		if (value && value !== TextConversionMode.Off) {
-			localStorage.setItem("saved_smtc_text_conversion_mode", value);
-		} else {
-			localStorage.removeItem("saved_smtc_text_conversion_mode");
-		}
-
-		invoke("control_external_media", {
-			payload: { type: "setTextConversion", mode: value },
-		}).catch((err) => {
-			console.error(err);
-			toast.error(
-				t("page.settings.smtc.textConversion.changeFailed", { error: err }),
-			);
-		});
-	};
-
-	return (
-		<>
-			<SubTitle>
-				<Trans i18nKey="page.settings.smtc.subtitle">SMTC 监听设置</Trans>
-			</SubTitle>
-
-			<NumberSettings
-				label={t("page.settings.smtc.timeOffset.label", "时间轴偏移量 (ms)")}
-				description={t(
-					"page.settings.smtc.timeOffset.description",
-					"校准歌词与歌曲的同步。正数解决歌词偏早，负数解决歌词偏晚。",
-				)}
-				configAtom={smtcTimeOffsetAtom}
-				type="number"
-				step={50}
-				placeholder="0"
-			/>
-
-			<SwitchSettings
-				label={t(
-					"page.settings.smtc.enableWsLyrics.label",
-					"启用 WebSocket 歌词源",
-				)}
-				description={t(
-					"page.settings.smtc.enableWsLyrics.description",
-					"允许在 SMTC 模式下通过 WebSocket 接收歌词。",
-				)}
-				configAtom={enableWsLyricsInSmtcModeAtom}
-			/>
-
-			<SettingEntry
-				label={t("page.settings.smtc.session.label")}
-				description={t("page.settings.smtc.session.description")}
-			>
-				<Select.Root
-					value={selectedSession ?? "null"}
-					onValueChange={handleSessionChange}
-				>
-					<Select.Trigger />
-					<Select.Content>
-						{sessionMenu.map((item) => (
-							<Select.Item key={item.value} value={item.value}>
-								{item.label}
-							</Select.Item>
-						))}
-					</Select.Content>
-				</Select.Root>
-			</SettingEntry>
-
-			<SettingEntry
-				label={t("page.settings.smtc.textConversion.label")}
-				description={t("page.settings.smtc.textConversion.description")}
-			>
-				<Select.Root
-					value={textConversion}
-					onValueChange={(v) =>
-						handleTextConversionChange(v as TextConversionMode)
-					}
-				>
-					<Select.Trigger />
-					<Select.Content>
-						{textConversionMenu.map((item) => (
-							<Select.Item key={item.value} value={item.value}>
-								{item.label}
-							</Select.Item>
-						))}
-					</Select.Content>
-				</Select.Root>
-			</SettingEntry>
-
-			<Card mt="2">
-				<Flex direction="row" align="center" gap="4">
-					<Flex direction="column" flexGrow="1">
-						<Text as="div">调试工具</Text>
-						<Text as="div" color="gray" size="2">
-							手动触发一次全面的状态刷新
-						</Text>
-					</Flex>
-					<Button
-						onClick={handleForceUpdateClick}
-						variant="soft"
-						color="orange"
-					>
-						强制刷新
-					</Button>
-				</Flex>
-			</Card>
 		</>
 	);
 };
@@ -1411,8 +1104,6 @@ export const PlayerSettingsTab: FC<{ category: string }> = ({ category }) => {
 			return <OthersSettings />;
 		case "about":
 			return <AboutSettings />;
-		case "smtc":
-			return <SmtcSettings />;
 		default:
 			return null;
 	}

@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
-import type { Update } from "@tauri-apps/plugin-updater";
+type Update = any;
+
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 
@@ -67,25 +67,6 @@ export const musicContextModeAtom = atomWithStorage(
 export const advanceLyricDynamicLyricTimeAtom = atomWithStorage(
 	"amll-player.advanceLyricDynamicLyricTimeAtom",
 	false,
-);
-
-/**
- * 是否启用系统的媒体控件功能，例如 Windows 的 SMTC
- * @default true
- */
-const enableMediaControlsInternalAtom = atomWithStorage(
-	"amll-player.enableMediaControls",
-	true,
-);
-
-export const enableMediaControlsAtom = atom(
-	(get) => get(enableMediaControlsInternalAtom),
-	(_get, set, enabled: boolean) => {
-		set(enableMediaControlsInternalAtom, enabled);
-		invoke("set_media_controls_enabled", { enabled }).catch((err) => {
-			console.error("设置媒体控件的启用状态失败", err);
-		});
-	},
 );
 
 /**
@@ -159,23 +140,3 @@ export const hideNowPlayingBarAtom = atom(false);
  * 存储当前已连接到本应用的 WebSocket 客户端地址列表。
  */
 export const wsProtocolConnectedAddrsAtom = atom(new Set<string>());
-
-// ==================================================================
-//                        应用更新状态
-// ==================================================================
-
-/**
- * 标记当前是否正在检查应用更新。
- */
-export const isCheckingUpdateAtom = atom(false);
-
-/**
- * 存储获取到的更新信息。
- * 如果没有更新，则为 `false`。
- */
-export const updateInfoAtom = atom<Update | false>(false);
-
-/**
- * 控制是否启用自动检查更新。
- */
-export const autoUpdateAtom = atomWithStorage("amll-player.autoUpdate", true);

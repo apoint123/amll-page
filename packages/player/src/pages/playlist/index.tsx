@@ -14,12 +14,9 @@ import {
 	Text,
 	TextField,
 } from "@radix-ui/themes";
-import { path } from "@tauri-apps/api";
-import { open } from "@tauri-apps/plugin-dialog";
-import { stat } from "@tauri-apps/plugin-fs";
-import { platform } from "@tauri-apps/plugin-os";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion, useMotionTemplate, useScroll } from "framer-motion";
+import jsmediatags from "jsmediatags";
 import md5 from "md5";
 import { type FC, useCallback, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -30,7 +27,7 @@ import { PageContainer } from "../../components/PageContainer/index.tsx";
 import { PlaylistCover } from "../../components/PlaylistCover/index.tsx";
 import { PlaylistSongCard } from "../../components/PlaylistSongCard/index.tsx";
 import { db, type Song } from "../../dexie.ts";
-import { emitAudioThread, readLocalMusicMetadata } from "../../utils/player.ts";
+import { webPlayer } from "../../utils/web-player.ts";
 import styles from "./index.module.css";
 
 export type Loadable<Value> =
@@ -105,172 +102,145 @@ export const Component: FC = () => {
 	const playlistInfoGapSize = useMotionTemplate`clamp(var(--space-1), calc(var(--space-4) - ${playlistViewScroll.scrollY}px / 5), var(--space-4))`;
 
 	const onAddLocalMusics = useCallback(async () => {
-		let filters = [
-			{
-				name: t("page.playlist.addLocalMusic.filterName", "音频文件"),
-				extensions: ["mp3", "flac", "wav", "m4a", "aac", "ogg"],
-			},
-			{
-				name: t("page.playlist.addLocalMusic.allFiles", "所有文件"),
-				extensions: ["*"],
-			},
-		];
-		if (platform() === "android") {
-			filters = [
-				{
-					name: t("page.playlist.addLocalMusic.filterName", "音频文件"),
-					extensions: ["audio/*"],
-				},
-				{
-					name: t("page.playlist.addLocalMusic.allFiles", "所有文件"),
-					extensions: ["*/*"],
-				},
-			];
-		}
-		if (platform() === "ios") {
-			filters.length = 0;
-		}
-		const results = await open({
-			multiple: true,
-			title: "选择本地音乐",
-			filters,
-		});
-		if (!results) return;
-		console.log(results);
-		const id = toast.loading(
-			t(
-				"page.playlist.addLocalMusic.toast.parsingMusicMetadata",
-				"正在解析音乐元数据以添加歌曲 ({current, plural, other {#}} / {total, plural, other {#}})",
-				{
-					current: 0,
-					total: results.length,
-				},
-			),
-		);
-		let current = 0;
-		let success = 0;
-		let errored = 0;
-		const transformed = (
-			await Promise.all(
-				results.map(async (v) => {
-					let normalized = v;
-					console.log(v);
-					if (platform() !== "android" && platform() !== "ios") {
-						normalized = (await path.normalize(v)).replace(/\\/gi, "/");
-					}
-					try {
-						console.log(await stat(v));
-						const pathMd5 = md5(normalized);
-						const musicInfo = await readLocalMusicMetadata(normalized);
+		const input = document.createElement("input");
+		input.type = "file";
+		input.multiple = true;
+		input.accept = "audio/*";
+		input.onchange = async () => {
+			const files = Array.from(input.files || []);
+			if (files.length === 0) return;
 
-						const coverData = new Uint8Array(musicInfo.cover);
-						const coverBlob = new Blob([coverData], { type: "image" });
+			const id = toast.loading(
+				t(
+					"page.playlist.addLocalMusic.toast.parsingMusicMetadata",
+					"正在解析音乐元数据以添加歌曲 ({current, plural, other {#}} / {total, plural, other {#}})",
+					{
+						current: 0,
+						total: files.length,
+					},
+				),
+			);
 
-						success += 1;
-						return {
-							id: pathMd5,
-							filePath: normalized,
-							songName: musicInfo.name,
-							songArtists: musicInfo.artist,
-							songAlbum: musicInfo.album,
-							lyricFormat: musicInfo.lyricFormat || "none",
-							lyric: musicInfo.lyric,
-							cover: coverBlob,
-							duration: musicInfo.duration,
-						} satisfies Song;
-					} catch (err) {
-						errored += 1;
-						console.warn("解析歌曲元数据以添加歌曲失败", normalized, err);
-						return null;
-					} finally {
-						current += 1;
-						toast.update(id, {
-							render: t(
-								"page.playlist.addLocalMusic.toast.parsingMusicMetadata",
-								"正在解析音乐元数据以添加歌曲 ({current, plural, other {#}} / {total, plural, other {#}})",
-								{
-									current: 0,
-									total: results.length,
-								},
-							),
-							progress: current / results.length,
-						});
-					}
-				}),
-			)
-		).filter((v) => !!v);
-		await db.songs.bulkPut(transformed);
-		const shouldAddIds = transformed
-			.map((v) => v.id)
-			.filter((v) => !playlist?.songIds.includes(v))
-			.reverse();
-		await db.playlists.update(Number(param.id), (obj) => {
-			obj.songIds.unshift(...shouldAddIds);
-		});
-		toast.done(id);
-		if (errored > 0 && success > 0) {
-			toast.warn(
-				t(
-					"page.playlist.addLocalMusic.toast.partiallyFailed",
-					"已添加 {succeed, plural, other {#}} 首歌曲，其中 {errored, plural, other {#}} 首歌曲添加失败",
-					{
-						succeed: success,
-						errored,
-					},
-				),
-			);
-		} else if (success === 0) {
-			toast.error(
-				t(
-					"page.playlist.addLocalMusic.toast.allFailed",
-					"{errored, plural, other {#}} 首歌曲添加失败",
-					{
-						errored,
-					},
-				),
-			);
-		} else {
-			toast.success(
-				t(
-					"page.playlist.addLocalMusic.toast.success",
-					"已全部添加 {count, plural, other {#}} 首歌曲",
-					{
-						count: success,
-					},
-				),
-			);
-		}
+			let current = 0;
+			let success = 0;
+			let errored = 0;
+
+			const transformed = (
+				await Promise.all(
+					files.map(async (file) => {
+						try {
+							const tags = await new Promise<any>((resolve, reject) => {
+								jsmediatags.read(file, {
+									onSuccess: resolve,
+									onError: reject,
+								});
+							});
+
+							const { title, artist, album, picture } = tags.tags;
+							const pathMd5 = md5(file.name + file.size); // Simple unique ID
+
+							const coverBlob = picture
+								? new Blob([new Uint8Array(picture.data)], {
+										type: picture.format,
+									})
+								: new Blob([await file.arrayBuffer()], { type: file.type });
+
+							success += 1;
+							return {
+								id: pathMd5,
+								filePath: file.name, // Using file name as a placeholder
+								songName: title || file.name,
+								songArtists: artist || "Unknown Artist",
+								songAlbum: album || "Unknown Album",
+								lyricFormat: "none",
+								lyric: "",
+								cover: coverBlob,
+								duration: 0, // Duration will be read by the player
+							} satisfies Song;
+						} catch (err) {
+							errored += 1;
+							console.warn("解析歌曲元数据以添加歌曲失败", file.name, err);
+							return null;
+						} finally {
+							current += 1;
+							toast.update(id, {
+								render: t(
+									"page.playlist.addLocalMusic.toast.parsingMusicMetadata",
+									"正在解析音乐元数据以添加歌曲 ({current, plural, other {#}} / {total, plural, other {#}})",
+									{
+										current: current,
+										total: files.length,
+									},
+								),
+								progress: current / files.length,
+							});
+						}
+					}),
+				)
+			).filter((v): v is Song => !!v);
+
+			await db.songs.bulkPut(transformed);
+			const shouldAddIds = transformed
+				.map((v) => v.id)
+				.filter((v) => !playlist?.songIds.includes(v))
+				.reverse();
+			await db.playlists.update(Number(param.id), (obj) => {
+				obj.songIds.unshift(...shouldAddIds);
+			});
+			toast.done(id);
+			if (errored > 0 && success > 0) {
+				toast.warn(
+					t(
+						"page.playlist.addLocalMusic.toast.partiallyFailed",
+						"已添加 {succeed, plural, other {#}} 首歌曲，其中 {errored, plural, other {#}} 首歌曲添加失败",
+						{
+							succeed: success,
+							errored,
+						},
+					),
+				);
+			} else if (success === 0) {
+				toast.error(
+					t(
+						"page.playlist.addLocalMusic.toast.allFailed",
+						"{errored, plural, other {#}} 首歌曲添加失败",
+						{
+							errored,
+						},
+					),
+				);
+			} else {
+				toast.success(
+					t(
+						"page.playlist.addLocalMusic.toast.success",
+						"已全部添加 {count, plural, other {#}} 首歌曲",
+						{
+							count: success,
+						},
+					),
+				);
+			}
+		};
+		input.click();
 	}, [playlist, param.id, t]);
 
 	const onPlayList = useCallback(
-		async (songIndex = 0, shuffle = false) => {
+		async (songIndex = 0) => {
 			if (playlist === undefined) return;
-			const collected = await db.songs
-				.toCollection()
-				.filter((v) => playlist.songIds.includes(v.id))
-				.toArray();
-			if (shuffle) {
-				for (let i = 0; i < collected.length; i++) {
-					const j = Math.floor(Math.random() * (i + 1));
-					[collected[i], collected[j]] = [collected[j], collected[i]];
-				}
-			} else {
-				collected.sort((a, b) => {
-					return (
-						playlist.songIds.indexOf(a.id) - playlist.songIds.indexOf(b.id)
-					);
-				});
+			const songId = playlist.songIds[songIndex];
+			if (!songId) return;
+
+			const song = await db.songs.get(songId);
+			if (!song || !(song.cover instanceof Blob)) {
+				toast.error("无法播放，找不到歌曲文件。");
+				return;
 			}
-			await emitAudioThread("setPlaylist", {
-				songs: collected.map((v, i) => ({
-					type: "local",
-					filePath: v.filePath,
-					origOrder: i,
-				})),
+
+			const file = new File([song.cover], song.filePath, {
+				type: song.cover.type,
 			});
-			await emitAudioThread("jumpToSong", {
-				songIndex,
-			});
+			await webPlayer.load(file);
+			webPlayer.play();
 		},
 		[playlist],
 	);
@@ -287,8 +257,10 @@ export const Component: FC = () => {
 
 	const onPlaylistDefault = useCallback(onPlayList.bind(null, 0), [onPlayList]);
 	const onPlaylistShuffle = useMemo(
-		() => onPlayList.bind(null, 0, true),
-		[onPlayList],
+		() => () => {
+			/* TODO */
+		},
+		[],
 	);
 
 	return (

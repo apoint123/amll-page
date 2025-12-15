@@ -1,16 +1,13 @@
-import react from "@vitejs/plugin-react";
 import { execSync } from "node:child_process";
+import { resolve } from "node:path";
+import react from "@vitejs/plugin-react";
 import jotaiDebugLabel from "jotai/babel/plugin-debug-label";
 import jotaiReactRefresh from "jotai/babel/plugin-react-refresh";
-import { resolve } from "node:path";
-import { type Plugin, defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import i18nextLoader from "vite-plugin-i18next-loader";
 import lightningcss from "vite-plugin-lightningcss";
 import svgr from "vite-plugin-svgr";
 import wasm from "vite-plugin-wasm";
-import MillionLint from "@million/lint";
-
-const host = process.env.TAURI_DEV_HOST;
 
 function getCommitHash() {
 	try {
@@ -84,8 +81,7 @@ const GitMetadataPlugin = (): Plugin => {
 // https://vitejs.dev/config/
 export default defineConfig({
 	build: {
-		target:
-			process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari15",
+		target: "esnext",
 		minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
 		modulePreload: {
 			polyfill: false,
@@ -100,7 +96,6 @@ export default defineConfig({
 		sourcemap: "inline",
 	},
 	plugins: [
-		MillionLint.vite(),
 		react({
 			babel: {
 				plugins: [jotaiDebugLabel, jotaiReactRefresh],
@@ -118,7 +113,7 @@ export default defineConfig({
 		lightningcss({
 			browserslist: "safari >= 10.13, chrome >= 91",
 		}),
-		GitMetadataPlugin(),
+		// GitMetadataPlugin(),
 		i18nextLoader({
 			paths: ["./locales"],
 			namespaceResolution: "basename",
@@ -127,6 +122,7 @@ export default defineConfig({
 	resolve: {
 		dedupe: ["react", "react-dom", "jotai"],
 		alias: {
+			jsmediatags: "jsmediatags/dist/jsmediatags.min.js",
 			"@applemusic-like-lyrics/core": resolve(__dirname, "../core/src"),
 			"@applemusic-like-lyrics/react": resolve(__dirname, "../react/src"),
 			"@applemusic-like-lyrics/ttml": resolve(__dirname, "../ttml/src"),
@@ -143,25 +139,12 @@ export default defineConfig({
 	// 2. tauri expects a fixed port, fail if that port is not available
 	server: {
 		port: 1420,
-		host: host || false,
 		strictPort: true,
-		warmup: {
-			clientFiles: [
-				"src/**/*.tsx",
-				"src/**/*.ts",
-				"src/**/*.css",
-				"src/**/*.svg?react",
-			],
-		},
-		hmr: host
-			? {
-					protocol: "ws",
-					host,
-					port: 1421,
-				}
-			: undefined,
 	},
 	// 3. to make use of `TAURI_DEBUG` and other env variables
 	// https://tauri.studio/v1/api/config#buildconfig.beforedevcommand
-	envPrefix: ["VITE_", "TAURI_"],
+	envPrefix: ["VITE_"],
+	optimizeDeps: {
+		include: ["jsmediatags"],
+	},
 });

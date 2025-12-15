@@ -7,7 +7,6 @@ import {
 	useState,
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { ExtensionInjectPoint } from "../../components/ExtensionInjectPoint/index.tsx";
 import { TTMLImportDialog } from "../../components/TTMLImportDialog/index.tsx";
 import { db } from "../../dexie.ts";
 import { Option } from "./common.tsx";
@@ -78,7 +77,6 @@ export const LyricTabContent: FC = () => {
 
 	return (
 		<>
-			<ExtensionInjectPoint injectPointName="page.song.tab.lyric.before" />
 			<Flex direction="column" gap="4">
 				<Option label={t("page.song.lyric.lyricFormatLabel", "歌词格式")}>
 					<Select.Root
@@ -214,7 +212,6 @@ export const LyricTabContent: FC = () => {
 			>
 				<Trans i18nKey="common.dialog.save">保存</Trans>
 			</Button>
-			<ExtensionInjectPoint injectPointName="page.song.tab.lyric.after" />
 		</>
 	);
 };

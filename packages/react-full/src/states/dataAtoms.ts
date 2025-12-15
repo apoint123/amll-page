@@ -1,6 +1,6 @@
+import type { LyricLine } from "@applemusic-like-lyrics/lyric";
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
-import type { LyricLine } from "@applemusic-like-lyrics/lyric";
 
 // ==================================================================
 //                            类型定义
