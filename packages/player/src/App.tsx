@@ -16,6 +16,8 @@ import {
 	LyricSizePreset,
 	lyricSizePresetAtom,
 } from "@applemusic-like-lyrics/react-full";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { StateConnector } from "./components/StateConnector/index.tsx";
 import { StatsComponent } from "./components/StatsComponent/index.tsx";
 import { router } from "./router.tsx";
@@ -98,6 +100,8 @@ function App() {
 				<LocalMusicContext key={MusicContextMode.Local} />
 			)}
 			<StateConnector />
+			<SpeedInsights />
+			<Analytics />
 
 			{/* UI渲染 */}
 			<StrictMode>
