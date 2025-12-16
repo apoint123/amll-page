@@ -82,7 +82,7 @@ const GitMetadataPlugin = (): Plugin => {
 export default defineConfig({
 	build: {
 		target: "esnext",
-		minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
+		minify: "esbuild",
 		modulePreload: {
 			polyfill: false,
 		},
@@ -92,7 +92,7 @@ export default defineConfig({
 				index: resolve(__dirname, "index.html"),
 			},
 		},
-		sourcemap: "inline",
+		sourcemap: true,
 	},
 	plugins: [
 		react({
@@ -101,8 +101,6 @@ export default defineConfig({
 			},
 		}),
 		wasm(),
-		// topLevelAwait(),
-
 		svgr({
 			svgrOptions: {
 				ref: true,
@@ -112,7 +110,7 @@ export default defineConfig({
 		lightningcss({
 			browserslist: "safari >= 10.13, chrome >= 91",
 		}),
-		// GitMetadataPlugin(),
+		GitMetadataPlugin(),
 		i18nextLoader({
 			paths: ["./locales"],
 			namespaceResolution: "basename",
