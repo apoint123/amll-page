@@ -600,33 +600,56 @@ export const LocalMusicContext: FC = () => {
 			}
 		};
 
-		const handlePlay = () => setMusicPlaying(true);
-		const handlePause = () => setMusicPlaying(false);
+		const handlePlay = () => {
+			setMusicPlaying(true);
+			startRafLoop();
+		};
+
+		const handlePause = () => {
+			setMusicPlaying(false);
+			stopRafLoop();
+		};
 
 		const handleEnded = () => {
 			playNext();
-		};
-
-		const handleTimeUpdate = (e: CustomEvent<number>) => {
-			store.set(musicPlayingPositionAtom, (e.detail * 1000) | 0);
 		};
 
 		const handleVolumeChange = (e: CustomEvent<number>) => {
 			store.set(musicVolumeAtom, e.detail);
 		};
 
+		let rafId: number;
+
+		const updatePositionLoop = () => {
+			const currentTime = webPlayer.currentTime;
+			store.set(musicPlayingPositionAtom, (currentTime * 1000) | 0);
+			rafId = requestAnimationFrame(updatePositionLoop);
+		};
+
+		const startRafLoop = () => {
+			cancelAnimationFrame(rafId);
+			updatePositionLoop();
+		};
+
+		const stopRafLoop = () => {
+			cancelAnimationFrame(rafId);
+		};
+
 		webPlayer.addEventListener("play", handlePlay);
 		webPlayer.addEventListener("pause", handlePause);
 		webPlayer.addEventListener("ended", handleEnded);
-		webPlayer.addEventListener("timeupdate", handleTimeUpdate);
 		webPlayer.addEventListener("volumechange", handleVolumeChange);
 		webPlayer.addEventListener("loaded", handleLoaded);
 
+		if (!webPlayer.getInternalSourceNode().mediaElement.paused) {
+			startRafLoop();
+		}
+
 		return () => {
+			stopRafLoop();
 			webPlayer.removeEventListener("play", handlePlay);
 			webPlayer.removeEventListener("pause", handlePause);
 			webPlayer.removeEventListener("ended", handleEnded);
-			webPlayer.removeEventListener("timeupdate", handleTimeUpdate);
 			webPlayer.removeEventListener("volumechange", handleVolumeChange);
 			webPlayer.removeEventListener("loaded", handleLoaded);
 
