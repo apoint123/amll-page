@@ -1,3 +1,7 @@
 locales:
+    - en-US
+    - ja-JP
+    - vi-VN
     - zh-CN
+    - zh-TW
 pluralSeparator: false
