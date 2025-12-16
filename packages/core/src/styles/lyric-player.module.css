@@ -57,7 +57,8 @@
 		background-color 0.25s,
 		box-shadow 0.25s;
 	/* 因为字体大小缩小了，故内边距要和主行字体大小统一，行边距计算公式为 100% / font-size 转 em 单位 */
-	padding: 1vh calc(var(--amll-lp-line-padding-x, 1em) / var(--amll-lp-bg-line-scale, 0.7));
+	padding: 1vh
+		calc(var(--amll-lp-line-padding-x, 1em) / var(--amll-lp-bg-line-scale, 0.7));
 
 	&.active {
 		transition:
@@ -85,7 +86,7 @@
 		}
 	}
 
-	&:not(:global(.playing))>.lyricBgLine {
+	&:not(:global(.playing)) > .lyricBgLine {
 		opacity: 0.4;
 	}
 }
@@ -103,13 +104,13 @@
 	& span {
 		display: inline-block;
 	}
-	
+
 	.romanWord {
 		font-size: 0.5em;
 		line-height: 1em;
 	}
 
-	&>span,
+	& > span,
 	span.emphasizeWrapper {
 		white-space: pre-wrap;
 		display: inline-block;
@@ -123,7 +124,7 @@
 			margin: -1em;
 			backface-visibility: hidden;
 
-			&>span {
+			& > span {
 				padding: 1em;
 				margin: -1em;
 				will-change: transform;
@@ -140,7 +141,7 @@
 	opacity: 0.3;
 }
 
-.disableSpring>* {
+.disableSpring > * {
 	transition:
 		filter 0.25s,
 		transform 0.5s,
@@ -164,7 +165,7 @@
 		opacity: 1;
 	}
 
-	&>* {
+	& > * {
 		width: clamp(0.5em, 1vh, 3em);
 		height: clamp(0.5em, 1vh, 3em);
 		display: inline-block;
