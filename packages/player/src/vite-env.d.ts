@@ -2,16 +2,6 @@
 /// <reference types="vite-plugin-svgr/client" />
 /// <reference types="vite-plugin-i18next-loader/vite" />
 
-declare module "jsmediatags" {
-	export function read(
-		file: File,
-		callbacks: {
-			onSuccess: (tag: any) => void;
-			onError: (error: any) => void;
-		},
-	): void;
-}
-
 declare module "md5" {
 	export default function md5(message: string | Buffer): string;
 }

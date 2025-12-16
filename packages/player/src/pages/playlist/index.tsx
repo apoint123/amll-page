@@ -1,9 +1,4 @@
 import {
-	musicArtistsAtom,
-	musicCoverAtom,
-	musicNameAtom,
-} from "@applemusic-like-lyrics/react-full";
-import {
 	ArrowLeftIcon,
 	Pencil1Icon,
 	PlayIcon,
@@ -22,8 +17,8 @@ import {
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion, useMotionTemplate, useScroll } from "framer-motion";
 import { useAtomValue, useSetAtom } from "jotai";
-import jsmediatags from "jsmediatags";
 import md5 from "md5";
+import { parseBlob, selectCover } from "music-metadata";
 import { type FC, useCallback, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
@@ -34,11 +29,9 @@ import { PlaylistCover } from "../../components/PlaylistCover/index.tsx";
 import { PlaylistSongCard } from "../../components/PlaylistSongCard/index.tsx";
 import { db, type Song } from "../../dexie.ts";
 import {
-	currentMusicIndexAtom,
 	currentMusicQueueAtom,
 	onRequestPlaySongByIndexAtom,
 } from "../../states/appAtoms.ts";
-import { webPlayer } from "../../utils/web-player.ts";
 import styles from "./index.module.css";
 
 export type Loadable<Value> =
@@ -112,11 +105,7 @@ export const Component: FC = () => {
 	const playlistCoverSize = useMotionTemplate`clamp(6em,calc(12em - ${playlistViewScroll.scrollY}px),12em)`;
 	const playlistInfoGapSize = useMotionTemplate`clamp(var(--space-1), calc(var(--space-4) - ${playlistViewScroll.scrollY}px / 5), var(--space-4))`;
 
-	const setMusicName = useSetAtom(musicNameAtom);
-	const setMusicArtists = useSetAtom(musicArtistsAtom);
-	const setMusicCover = useSetAtom(musicCoverAtom);
 	const setQueue = useSetAtom(currentMusicQueueAtom);
-	const setQueueIndex = useSetAtom(currentMusicIndexAtom);
 	const playSongByIndex = useAtomValue(onRequestPlaySongByIndexAtom).onEmit;
 
 	const onAddLocalMusics = useCallback(async () => {
@@ -146,34 +135,45 @@ export const Component: FC = () => {
 			const transformed = await Promise.all(
 				files.map(async (file): Promise<Song | null> => {
 					try {
-						const tags = await new Promise<any>((resolve, reject) => {
-							jsmediatags.read(file, {
-								onSuccess: resolve,
-								onError: reject,
+						const metadata = await parseBlob(file);
+
+						const { title, artist, album, picture, lyrics } = metadata.common;
+
+						let lyric = "";
+
+						if (lyrics && lyrics.length > 0) {
+							const lyricData = lyrics[0];
+
+							if (lyricData.syncText && lyricData.syncText.length > 0) {
+								lyric = lyricData.syncText.join("\n");
+							} else if (lyricData.text) {
+								lyric = lyricData.text;
+							}
+						}
+
+						const coverImage = selectCover(picture);
+
+						const pathMd5 = md5(file.name + file.size);
+
+						let coverBlob = new Blob([], { type: "image/png" });
+						if (coverImage) {
+							coverBlob = new Blob([coverImage.data as BlobPart], {
+								type: coverImage.format,
 							});
-						});
-
-						const { title, artist, album, picture } = tags.tags;
-						const pathMd5 = md5(file.name + file.size); // Simple unique ID
-
-						const coverBlob = picture
-							? new Blob([new Uint8Array(picture.data)], {
-									type: picture.format,
-								})
-							: new Blob([], { type: "image/png" });
+						}
 
 						success += 1;
 						return {
 							id: pathMd5,
-							filePath: file.name, // Using file name as a placeholder
+							filePath: file.name,
 							songName: title || file.name,
 							songArtists: artist || "Unknown Artist",
 							songAlbum: album || "Unknown Album",
-							lyricFormat: "none",
-							lyric: "",
+							lyricFormat: "",
+							lyric: lyric,
 							cover: coverBlob,
 							file: file,
-							duration: 0, // Duration will be read by the player
+							duration: metadata.format.duration || 0,
 						};
 					} catch (err) {
 						errored += 1;

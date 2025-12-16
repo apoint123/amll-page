@@ -121,7 +121,6 @@ export default defineConfig({
 	resolve: {
 		dedupe: ["react", "react-dom", "jotai"],
 		alias: {
-			jsmediatags: "jsmediatags/dist/jsmediatags.min.js",
 			"@applemusic-like-lyrics/core": resolve(__dirname, "../core/src"),
 			"@applemusic-like-lyrics/react": resolve(__dirname, "../react/src"),
 			"@applemusic-like-lyrics/ttml": resolve(__dirname, "../ttml/src"),
@@ -143,7 +142,4 @@ export default defineConfig({
 	// 3. to make use of `TAURI_DEBUG` and other env variables
 	// https://tauri.studio/v1/api/config#buildconfig.beforedevcommand
 	envPrefix: ["VITE_"],
-	optimizeDeps: {
-		include: ["jsmediatags"],
-	},
 });

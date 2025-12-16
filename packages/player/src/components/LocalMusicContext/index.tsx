@@ -9,6 +9,7 @@ import {
 	parseYrc,
 } from "@applemusic-like-lyrics/lyric";
 import {
+	AudioQualityType,
 	fftDataRangeAtom,
 	hideLyricViewAtom,
 	isLyricPageOpenedAtom,
@@ -38,6 +39,7 @@ import {
 import chalk from "chalk";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
+import { parseBlob } from "music-metadata";
 import { type FC, useEffect, useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
@@ -48,6 +50,7 @@ import {
 	currentMusicQueueAtom,
 	onRequestPlaySongByIndexAtom,
 } from "../../states/appAtoms.ts";
+import { mapMetadataToQuality } from "../../utils/quality.ts";
 import { webPlayer } from "../../utils/web-player.ts";
 
 export const FFTToLowPassContext: FC = () => {
@@ -119,12 +122,39 @@ const MusicQualityTagText: FC = () => {
 	const setMusicQualityTag = useSetAtom(musicQualityTagAtom);
 
 	useLayoutEffect(() => {
-		// Music quality is not available from jsmediatags, so we'll just show nothing.
-		setMusicQualityTag(null);
+		switch (musicQuality.type) {
+			case AudioQualityType.None:
+				return setMusicQualityTag(null);
+
+			case AudioQualityType.Lossless:
+				return setMusicQualityTag({
+					tagIcon: true,
+					tagText: t("amll.qualityTag.lossless", "无损"),
+					isDolbyAtmos: false,
+				});
+
+			case AudioQualityType.HiResLossless:
+				return setMusicQualityTag({
+					tagIcon: true,
+					tagText: t("amll.qualityTag.hires", "高解析度无损"),
+					isDolbyAtmos: false,
+				});
+
+			case AudioQualityType.DolbyAtmos:
+				return setMusicQualityTag({
+					tagIcon: false,
+					tagText: "",
+					isDolbyAtmos: true,
+				});
+
+			default:
+				return setMusicQualityTag(null);
+		}
 	}, [t, musicQuality, setMusicQualityTag]);
 
 	return null;
 };
+
 const TTML_LOG_TAG = chalk.bgHex("#FF5577").hex("#FFFFFF")(" TTML DB ");
 const LYRIC_LOG_TAG = chalk.bgHex("#FF4444").hex("#FFFFFF")(" LYRIC ");
 
@@ -436,6 +466,24 @@ export const LocalMusicContext: FC = () => {
 			if (!song || !(song.file instanceof Blob)) {
 				toast.error("无法播放，找不到歌曲文件。");
 				return;
+			}
+
+			try {
+				const metadata = await parseBlob(song.file);
+				const qualityState = mapMetadataToQuality(metadata);
+
+				store.set(musicQualityAtom, qualityState);
+
+				console.log("音频质量", qualityState);
+			} catch (e) {
+				console.warn("解析音频质量失败", e);
+				store.set(musicQualityAtom, {
+					type: AudioQualityType.None,
+					codec: "Unknown",
+					channels: 2,
+					sampleRate: 44100,
+					sampleFormat: "16-bit",
+				});
 			}
 
 			store.set(musicNameAtom, song.songName);
