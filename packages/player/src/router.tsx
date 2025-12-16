@@ -1,7 +1,7 @@
 import {
-	Route,
 	createBrowserRouter,
 	createRoutesFromElements,
+	Route,
 } from "react-router-dom";
 import ErrorPage from "./pages/error/index.tsx";
 
@@ -43,18 +43,6 @@ export const router = createBrowserRouter(
 				lazy={() => import("./pages/amll-dev/index.tsx")}
 				errorElement={<ErrorPage />}
 			/>
-			<Route path="/ws" errorElement={<ErrorPage />}>
-				<Route
-					path="recv"
-					lazy={() => import("./pages/ws/recv.tsx")}
-					errorElement={<ErrorPage />}
-				/>
-				<Route
-					path="send"
-					lazy={() => import("./pages/ws/send.tsx")}
-					errorElement={<ErrorPage />}
-				/>
-			</Route>
 		</>,
 	),
 );

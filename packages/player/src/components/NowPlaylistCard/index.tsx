@@ -1,107 +1,68 @@
-import {
-	currentPlaylistAtom,
-	currentPlaylistMusicIndexAtom,
-} from "@applemusic-like-lyrics/react-full";
 import { PlayIcon } from "@radix-ui/react-icons";
 import { Avatar, Box, Flex, type FlexProps, Inset } from "@radix-ui/themes";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useAtomValue } from "jotai";
-import {
-	type FC,
-	type HTMLProps,
-	useEffect,
-	useLayoutEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { useAtom, useAtomValue } from "jotai";
+import { type CSSProperties, type FC, useEffect, useMemo, useRef } from "react";
 import { Trans } from "react-i18next";
-import { db, type Song } from "../../dexie.ts";
-import { webPlayer } from "../../utils/web-player.ts";
+import { db } from "../../dexie.ts";
+import {
+	currentMusicIndexAtom,
+	currentMusicQueueAtom,
+	onRequestPlaySongByIndexAtom,
+} from "../../states/appAtoms.ts";
 import styles from "./index.module.css";
 
-const PlaylistSongItem: FC<
-	{
-		songData: any;
-		index: number;
-	} & HTMLProps<HTMLDivElement>
-> = ({ songData, className, index, ...props }) => {
-	const playlistIndex = useAtomValue(currentPlaylistMusicIndexAtom);
-	const [cover, setCover] = useState("");
+const PlaylistSongItem: FC<{
+	songId: string;
+	index: number;
+	style: CSSProperties;
+}> = ({ songId, index, style }) => {
+	const [currentIndex] = useAtom(currentMusicIndexAtom);
+	const playSongByIndex = useAtomValue(onRequestPlaySongByIndexAtom).onEmit;
 
-	const song: Song | null = useMemo(() => {
-		if (songData.type === "custom" && songData.songJsonData) {
-			try {
-				return JSON.parse(songData.songJsonData);
-			} catch (e) {
-				console.error("Failed to parse songJsonData:", e);
-				return null;
-			}
+	const song = useLiveQuery(() => db.songs.get(songId), [songId]);
+
+	const coverUrl = useMemo(() => {
+		if (song?.cover instanceof Blob) {
+			return URL.createObjectURL(song.cover);
 		}
-		return null;
-	}, [songData]);
+		return "";
+	}, [song?.cover]);
 
-	useLayoutEffect(() => {
-		let newUri: string | null = null;
-		let isActive = true;
-
-		if (song) {
-			db.songs.get(song.id).then((dbSong) => {
-				if (isActive && dbSong?.cover instanceof Blob) {
-					newUri = URL.createObjectURL(dbSong.cover);
-					setCover(newUri);
-				}
-			});
-		} else {
-			setCover("");
-		}
-
+	useEffect(() => {
 		return () => {
-			isActive = false;
-			if (newUri) {
-				URL.revokeObjectURL(newUri);
-			}
+			if (coverUrl) URL.revokeObjectURL(coverUrl);
 		};
-	}, [song]);
+	}, [coverUrl]);
 
-	const name =
-		song?.songName ??
-		(songData.type === "local" ? songData.filePath : "未知歌曲");
+	const name = song?.songName ?? "未知歌曲";
 	const artists = song?.songArtists ?? "未知艺术家";
+	const isPlaying = currentIndex === index;
 
 	return (
-		<div className={className} {...props}>
+		<div style={style} className={styles.playlistSongItemWrapper}>
 			<button
 				type="button"
 				className={styles.playlistSongItem}
-				onDoubleClick={async () => {
-					if (song) {
-						const songFile = await db.songs.get(song.id);
-						if (songFile?.cover instanceof Blob) {
-							const file = new File([songFile.cover], song.filePath, {
-								type: songFile.cover.type,
-							});
-							await webPlayer.load(file);
-							webPlayer.play();
-						}
-					}
-				}}
+				onDoubleClick={() => playSongByIndex(index)}
 				aria-label={`播放 ${name} - ${artists}`}
+				data-active={isPlaying}
 			>
-				<Avatar size="4" fallback={<div />} src={cover} />
+				<Avatar size="4" fallback={<div />} src={coverUrl} />
 				<div className={styles.musicInfo}>
 					<div className={styles.name}>{name}</div>
 					<div className={styles.artists}>{artists}</div>
 				</div>
-				{playlistIndex === index && <PlayIcon />}
+				{isPlaying && <PlayIcon />}
 			</button>
 		</div>
 	);
 };
 
 export const NowPlaylistCard: FC<FlexProps> = (props) => {
-	const playlist = useAtomValue(currentPlaylistAtom);
-	const playlistIndex = useAtomValue(currentPlaylistMusicIndexAtom);
+	const playlist = useAtomValue(currentMusicQueueAtom);
+	const playlistIndex = useAtomValue(currentMusicIndexAtom);
 	const playlistContainerRef = useRef<HTMLDivElement>(null);
 
 	const rowVirtualizer = useVirtualizer({
@@ -112,7 +73,7 @@ export const NowPlaylistCard: FC<FlexProps> = (props) => {
 	});
 
 	useEffect(() => {
-		if (rowVirtualizer) {
+		if (rowVirtualizer && playlistIndex >= 0) {
 			rowVirtualizer.scrollToIndex(playlistIndex, { align: "center" });
 		}
 	}, [playlistIndex, rowVirtualizer]);
@@ -148,8 +109,7 @@ export const NowPlaylistCard: FC<FlexProps> = (props) => {
 					}}
 				>
 					{rowVirtualizer.getVirtualItems().map((virtualItem) => {
-						const songData = playlist[virtualItem.index];
-						if (!songData) return null;
+						const songId = playlist[virtualItem.index];
 						return (
 							<PlaylistSongItem
 								key={virtualItem.key}
@@ -161,7 +121,7 @@ export const NowPlaylistCard: FC<FlexProps> = (props) => {
 									height: `${virtualItem.size}px`,
 									transform: `translateY(${virtualItem.start}px)`,
 								}}
-								songData={songData}
+								songId={songId}
 								index={virtualItem.index}
 							/>
 						);

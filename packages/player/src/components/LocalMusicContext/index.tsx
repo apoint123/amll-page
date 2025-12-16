@@ -13,9 +13,12 @@ import {
 	hideLyricViewAtom,
 	isLyricPageOpenedAtom,
 	type MusicQualityState,
+	musicArtistsAtom,
+	musicCoverAtom,
 	musicDurationAtom,
 	musicIdAtom,
 	musicLyricLinesAtom,
+	musicNameAtom,
 	musicPlayingAtom,
 	musicPlayingPositionAtom,
 	musicQualityAtom,
@@ -39,7 +42,12 @@ import { type FC, useEffect, useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { db } from "../../dexie.ts";
-import { advanceLyricDynamicLyricTimeAtom } from "../../states/appAtoms.ts";
+import {
+	advanceLyricDynamicLyricTimeAtom,
+	currentMusicIndexAtom,
+	currentMusicQueueAtom,
+	onRequestPlaySongByIndexAtom,
+} from "../../states/appAtoms.ts";
 import { webPlayer } from "../../utils/web-player.ts";
 
 export const FFTToLowPassContext: FC = () => {
@@ -414,6 +422,49 @@ export const LocalMusicContext: FC = () => {
 	useEffect(() => {
 		const toEmit = <T,>(onEmit: T) => ({ onEmit });
 
+		const playSongByIndex = async (index: number) => {
+			const queue = store.get(currentMusicQueueAtom);
+			if (!queue || queue.length === 0) return;
+
+			let targetIndex = index;
+			if (targetIndex >= queue.length) targetIndex = 0;
+			if (targetIndex < 0) targetIndex = queue.length - 1;
+
+			const songId = queue[targetIndex];
+			const song = await db.songs.get(songId);
+
+			if (!song || !(song.file instanceof Blob)) {
+				toast.error("无法播放，找不到歌曲文件。");
+				return;
+			}
+
+			store.set(musicNameAtom, song.songName);
+			store.set(
+				musicArtistsAtom,
+				song.songArtists.split(",").map((v) => ({ name: v, id: v })),
+			);
+			store.set(musicCoverAtom, URL.createObjectURL(song.cover));
+			store.set(musicIdAtom, song.id);
+			store.set(currentMusicIndexAtom, targetIndex);
+
+			const file = new File([song.file], song.filePath, {
+				type: song.file.type,
+			});
+			await webPlayer.load(file);
+			await webPlayer.play();
+			store.set(musicPlayingAtom, true);
+		};
+
+		const playNext = () => {
+			const currentIndex = store.get(currentMusicIndexAtom);
+			playSongByIndex(currentIndex + 1);
+		};
+
+		const playPrev = () => {
+			const currentIndex = store.get(currentMusicIndexAtom);
+			playSongByIndex(currentIndex - 1);
+		};
+
 		store.set(
 			onPlayOrResumeAtom,
 			toEmit(() => {
@@ -425,18 +476,9 @@ export const LocalMusicContext: FC = () => {
 			}),
 		);
 
-		store.set(
-			onRequestNextSongAtom,
-			toEmit(() => {
-				/* TODO */
-			}),
-		);
-		store.set(
-			onRequestPrevSongAtom,
-			toEmit(() => {
-				/* TODO */
-			}),
-		);
+		store.set(onRequestNextSongAtom, toEmit(playNext));
+		store.set(onRequestPrevSongAtom, toEmit(playPrev));
+
 		store.set(
 			onClickControlThumbAtom,
 			toEmit(() => {
@@ -459,6 +501,12 @@ export const LocalMusicContext: FC = () => {
 			onChangeVolumeAtom,
 			toEmit((volume: number) => {
 				webPlayer.setVolume(volume);
+			}),
+		);
+		store.set(
+			onRequestPlaySongByIndexAtom,
+			toEmit((index: number) => {
+				playSongByIndex(index);
 			}),
 		);
 		store.set(
@@ -486,41 +534,53 @@ export const LocalMusicContext: FC = () => {
 			}),
 		);
 
-		const onPlay = () => setMusicPlaying(true);
-		const onPause = () => setMusicPlaying(false);
-		const onVolumeChange = (volume: number) =>
-			store.set(musicVolumeAtom, volume);
-
-		const onLoaded = () => {
+		const handleLoaded = async () => {
 			const durationSec = webPlayer.duration;
 			const durationMs = (durationSec * 1000) | 0;
 
-			store.set(musicDurationAtom, durationMs);
+			if (Number.isFinite(durationSec)) {
+				store.set(musicDurationAtom, durationMs);
 
-			const currentMusicId = store.get(musicIdAtom);
-			if (currentMusicId && durationMs > 0) {
-				db.songs
-					.update(currentMusicId, { duration: durationMs })
-					.then(() => console.log(`更新时长信息: ${durationMs}ms`))
-					.catch((e) => console.warn("更新时长失败", e));
+				const currentMusicId = store.get(musicIdAtom);
+				if (currentMusicId) {
+					try {
+						await db.songs.update(currentMusicId, { duration: durationSec });
+					} catch (e) {
+						console.warn("更新歌曲时长失败", e);
+					}
+				}
 			}
 		};
 
-		webPlayer.on("play", onPlay);
-		webPlayer.on("pause", onPause);
-		webPlayer.on("volumechange", onVolumeChange);
-		webPlayer.on("loaded", onLoaded);
+		const handlePlay = () => setMusicPlaying(true);
+		const handlePause = () => setMusicPlaying(false);
 
-		const timer = setInterval(() => {
-			store.set(musicPlayingPositionAtom, (webPlayer.currentTime * 1000) | 0);
-		}, 200);
+		const handleEnded = () => {
+			playNext();
+		};
+
+		const handleTimeUpdate = (e: CustomEvent<number>) => {
+			store.set(musicPlayingPositionAtom, (e.detail * 1000) | 0);
+		};
+
+		const handleVolumeChange = (e: CustomEvent<number>) => {
+			store.set(musicVolumeAtom, e.detail);
+		};
+
+		webPlayer.addEventListener("play", handlePlay);
+		webPlayer.addEventListener("pause", handlePause);
+		webPlayer.addEventListener("ended", handleEnded);
+		webPlayer.addEventListener("timeupdate", handleTimeUpdate);
+		webPlayer.addEventListener("volumechange", handleVolumeChange);
+		webPlayer.addEventListener("loaded", handleLoaded);
 
 		return () => {
-			clearInterval(timer);
-			webPlayer.off("play", onPlay);
-			webPlayer.off("pause", onPause);
-			webPlayer.off("volumechange", onVolumeChange);
-			webPlayer.off("loaded", onLoaded);
+			webPlayer.removeEventListener("play", handlePlay);
+			webPlayer.removeEventListener("pause", handlePause);
+			webPlayer.removeEventListener("ended", handleEnded);
+			webPlayer.removeEventListener("timeupdate", handleTimeUpdate);
+			webPlayer.removeEventListener("volumechange", handleVolumeChange);
+			webPlayer.removeEventListener("loaded", handleLoaded);
 
 			const doNothing = toEmit(() => {});
 			store.set(onRequestNextSongAtom, doNothing);
@@ -530,6 +590,7 @@ export const LocalMusicContext: FC = () => {
 			store.set(onSeekPositionAtom, doNothing);
 			store.set(onLyricLineClickAtom, doNothing);
 			store.set(onChangeVolumeAtom, doNothing);
+			store.set(onRequestPlaySongByIndexAtom, doNothing);
 			store.set(onRequestOpenMenuAtom, doNothing);
 			store.set(onClickLeftFunctionButtonAtom, doNothing);
 			store.set(onClickRightFunctionButtonAtom, doNothing);

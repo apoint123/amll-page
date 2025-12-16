@@ -21,7 +21,7 @@ import {
 } from "@radix-ui/themes";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion, useMotionTemplate, useScroll } from "framer-motion";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import jsmediatags from "jsmediatags";
 import md5 from "md5";
 import { type FC, useCallback, useMemo, useRef, useState } from "react";
@@ -33,6 +33,11 @@ import { PageContainer } from "../../components/PageContainer/index.tsx";
 import { PlaylistCover } from "../../components/PlaylistCover/index.tsx";
 import { PlaylistSongCard } from "../../components/PlaylistSongCard/index.tsx";
 import { db, type Song } from "../../dexie.ts";
+import {
+	currentMusicIndexAtom,
+	currentMusicQueueAtom,
+	onRequestPlaySongByIndexAtom,
+} from "../../states/appAtoms.ts";
 import { webPlayer } from "../../utils/web-player.ts";
 import styles from "./index.module.css";
 
@@ -110,6 +115,9 @@ export const Component: FC = () => {
 	const setMusicName = useSetAtom(musicNameAtom);
 	const setMusicArtists = useSetAtom(musicArtistsAtom);
 	const setMusicCover = useSetAtom(musicCoverAtom);
+	const setQueue = useSetAtom(currentMusicQueueAtom);
+	const setQueueIndex = useSetAtom(currentMusicIndexAtom);
+	const playSongByIndex = useAtomValue(onRequestPlaySongByIndexAtom).onEmit;
 
 	const onAddLocalMusics = useCallback(async () => {
 		const input = document.createElement("input");
@@ -240,26 +248,11 @@ export const Component: FC = () => {
 			if (playlist === undefined) return;
 			const songId = playlist.songIds[songIndex];
 			if (!songId) return;
+			setQueue(playlist.songIds);
 
-			const song = await db.songs.get(songId);
-			if (!song || !(song.file instanceof Blob)) {
-				toast.error("无法播放，找不到歌曲文件。");
-				return;
-			}
-
-			const file = new File([song.file], song.filePath, {
-				type: song.file.type,
-			});
-			setMusicName(song.songName);
-			setMusicArtists(
-				song.songArtists.split(",").map((v) => ({ name: v, id: v })),
-			);
-			setMusicCover(URL.createObjectURL(song.cover));
-
-			await webPlayer.load(file);
-			webPlayer.play();
+			playSongByIndex(songIndex);
 		},
-		[playlist, setMusicArtists, setMusicCover, setMusicName],
+		[playlist, setQueue, playSongByIndex],
 	);
 
 	const onDeleteSong = useCallback(

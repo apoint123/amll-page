@@ -1,68 +1,107 @@
-type Listener = (...args: any[]) => void;
+import { TypedEventTarget } from "./TypedEventTarget";
 
-export class WebPlayer {
-	private events: Record<string, Listener[]> = {};
+export interface WebPlayerEventMap {
+	play: undefined;
+	pause: undefined;
+	ended: undefined;
+	loaded: undefined;
+	timeupdate: number;
+	volumechange: number;
+	error: Error;
+}
+
+export class WebPlayer extends TypedEventTarget<WebPlayerEventMap> {
 	private audioContext: AudioContext;
-	private audioBuffer: AudioBuffer | null = null;
-	private sourceNode: AudioBufferSourceNode | null = null;
+	private audioElement: HTMLAudioElement;
+	private sourceNode: MediaElementAudioSourceNode;
 	private gainNode: GainNode;
-	private isPlaying = false;
-	private startTime = 0;
-	private pausedTime = 0;
+	private currentObjectUrl: string | null = null;
 
 	constructor() {
+		super();
 		this.audioContext = new AudioContext();
+		this.audioElement = new Audio();
+		this.audioElement.crossOrigin = "anonymous";
+
+		this.sourceNode = this.audioContext.createMediaElementSource(
+			this.audioElement,
+		);
 		this.gainNode = this.audioContext.createGain();
+
+		this.sourceNode.connect(this.gainNode);
 		this.gainNode.connect(this.audioContext.destination);
+
+		this.bindEvents();
+	}
+
+	private bindEvents() {
+		const simpleEvents = ["play", "pause", "ended"] as const;
+		simpleEvents.forEach((evt) => {
+			this.audioElement.addEventListener(evt, () => {
+				this.emit(evt, undefined);
+			});
+		});
+
+		this.audioElement.addEventListener("timeupdate", () => {
+			this.emit("timeupdate", this.currentTime);
+		});
+
+		this.audioElement.addEventListener("error", (e) => {
+			console.error("WebPlayer Error:", e);
+			const errorMsg =
+				this.audioElement.error?.message || "Unknown Audio Error";
+			this.emit("error", new Error(errorMsg));
+		});
 	}
 
 	async load(audioFile: File) {
-		const arrayBuffer = await audioFile.arrayBuffer();
-		this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-		this.emit("loaded");
-	}
-
-	play() {
-		if (this.isPlaying || !this.audioBuffer) {
-			return;
+		if (this.currentObjectUrl) {
+			URL.revokeObjectURL(this.currentObjectUrl);
 		}
 
-		this.sourceNode = this.audioContext.createBufferSource();
-		this.sourceNode.buffer = this.audioBuffer;
-		this.sourceNode.connect(this.gainNode);
+		this.currentObjectUrl = URL.createObjectURL(audioFile);
+		this.audioElement.src = this.currentObjectUrl;
 
-		const offset = this.pausedTime;
-		this.sourceNode.start(0, offset);
+		return new Promise<void>((resolve, reject) => {
+			const onCanPlay = () => {
+				cleanup();
+				this.emit("loaded", undefined);
+				resolve();
+			};
+			const onError = (e: Event) => {
+				cleanup();
+				reject(e);
+			};
+			const cleanup = () => {
+				this.audioElement.removeEventListener("canplay", onCanPlay);
+				this.audioElement.removeEventListener("error", onError);
+			};
 
-		this.startTime = this.audioContext.currentTime - offset;
-		this.pausedTime = 0;
-		this.isPlaying = true;
-		this.emit("play");
+			this.audioElement.addEventListener("canplay", onCanPlay);
+			this.audioElement.addEventListener("error", onError);
+
+			this.audioElement.load();
+		});
+	}
+
+	async play() {
+		if (this.audioContext.state === "suspended") {
+			await this.audioContext.resume();
+		}
+		try {
+			await this.audioElement.play();
+		} catch (err) {
+			console.error(err);
+		}
 	}
 
 	pause() {
-		if (!this.isPlaying || !this.sourceNode) {
-			return;
-		}
-
-		this.sourceNode.stop();
-		this.pausedTime = this.audioContext.currentTime - this.startTime;
-		this.isPlaying = false;
-		this.emit("pause");
+		this.audioElement.pause();
 	}
 
 	seek(time: number) {
-		if (!this.audioBuffer) return;
-
-		const wasPlaying = this.isPlaying;
-		if (wasPlaying) {
-			this.pause();
-		}
-
-		this.pausedTime = time;
-
-		if (wasPlaying) {
-			this.play();
+		if (Number.isFinite(time)) {
+			this.audioElement.currentTime = time;
 		}
 	}
 
@@ -72,35 +111,22 @@ export class WebPlayer {
 	}
 
 	get duration() {
-		return this.audioBuffer?.duration ?? 0;
+		return Number.isNaN(this.audioElement.duration)
+			? 0
+			: this.audioElement.duration;
 	}
 
 	get currentTime() {
-		if (this.isPlaying) {
-			return this.audioContext.currentTime - this.startTime;
-		}
-		return this.pausedTime;
+		return this.audioElement.currentTime;
 	}
 
-	on(event: string, listener: Listener) {
-		if (!this.events[event]) {
-			this.events[event] = [];
-		}
-		this.events[event].push(listener);
+	getInternalSourceNode() {
+		return this.sourceNode;
 	}
 
-	off(event: string, listener: Listener) {
-		if (!this.events[event]) {
-			return;
-		}
-		this.events[event] = this.events[event].filter((l) => l !== listener);
-	}
-
-	private emit(event: string, ...args: any[]) {
-		if (!this.events[event]) {
-			return;
-		}
-		this.events[event].forEach((listener) => listener(...args));
+	getInternalContext() {
+		return this.audioContext;
 	}
 }
+
 export const webPlayer = new WebPlayer();

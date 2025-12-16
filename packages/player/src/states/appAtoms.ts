@@ -68,14 +68,6 @@ export const advanceLyricDynamicLyricTimeAtom = atomWithStorage(
 );
 
 /**
- * 是否在 SMTC 监听模式下启用 WebSocket 接收歌词。
- */
-export const enableWsLyricsInSmtcModeAtom = atomWithStorage(
-	"amll-player.enableWsLyricsInSmtcMode",
-	true,
-);
-
-/**
  * WebSocket 协议的监听地址和端口。
  */
 export const wsProtocolListenAddrAtom = atomWithStorage(
@@ -125,16 +117,26 @@ export const playlistCardOpenedAtom = atom(false);
 export const recordPanelOpenedAtom = atom(false);
 
 /**
- * 控制应用的主菜单（通常在歌词页面）是否打开。
- */
-export const amllMenuOpenedAtom = atom(false);
-
-/**
  * 控制主界面底部的“正在播放”栏是否隐藏。
  */
 export const hideNowPlayingBarAtom = atom(false);
 
 /**
- * 存储当前已连接到本应用的 WebSocket 客户端地址列表。
+ * @description 存储 Song ID 列表
  */
-export const wsProtocolConnectedAddrsAtom = atom(new Set<string>());
+export const currentMusicQueueAtom = atom<string[]>([]);
+
+/**
+ * @description 当前播放索引
+ */
+export const currentMusicIndexAtom = atom<number>(-1);
+
+/**
+ * @description 请求播放指定索引的歌曲
+ * @param index 索引
+ */
+export const onRequestPlaySongByIndexAtom = atom<{
+	onEmit: (index: number) => void;
+}>({
+	onEmit: () => {},
+});

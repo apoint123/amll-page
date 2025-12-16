@@ -34,7 +34,6 @@ export const AMLLContextMenuContent: FC = () => {
 				<Trans i18nKey="amll.contextMenu.forwardSong">下一首</Trans>
 			</ContextMenu.Item>
 			<ContextMenu.Separator />
-			<ContextMenu.Separator />
 			<ContextMenu.CheckboxItem
 				checked={!hideLyricView}
 				onCheckedChange={(e) => setHideLyricView(!e)}
