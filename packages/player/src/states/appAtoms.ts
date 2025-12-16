@@ -88,14 +88,36 @@ export const showStatJSFrameAtom = atomWithStorage(
 // ==================================================================
 
 /**
- * 一个派生状态，用于自动检测系统是否处于深色模式。
+ * @description 查询当前是否是深色模式
  */
-export const autoDarkModeAtom = atom(true);
+const systemDarkModeQuery =
+	typeof window !== "undefined" && window.matchMedia
+		? window.matchMedia("(prefers-color-scheme: dark)")
+		: null;
 
 /**
- * 一个派生状态，用于最终决定应用应该显示的主题。
- * 它会根据 `darkModeAtom` 的设置（自动/手动）来返回最终的主题状态。
- * 同时，它也允许通过 set 操作来直接设置手动模式下的主题。
+ * @description 用于自动检测系统是否处于深色模式
+ */
+export const autoDarkModeAtom = atom(
+	systemDarkModeQuery ? systemDarkModeQuery.matches : true,
+);
+
+autoDarkModeAtom.onMount = (set) => {
+	if (!systemDarkModeQuery) return;
+
+	const handler = (e: MediaQueryListEvent) => {
+		set(e.matches);
+	};
+
+	systemDarkModeQuery.addEventListener("change", handler);
+
+	return () => {
+		systemDarkModeQuery.removeEventListener("change", handler);
+	};
+};
+
+/**
+ * @description 当前是否是深色模式
  */
 export const isDarkThemeAtom = atom(
 	(get) =>
