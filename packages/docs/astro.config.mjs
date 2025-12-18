@@ -1,10 +1,10 @@
 // @ts-check
+
+import react from "@astrojs/react";
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
 import { Application, PageEvent } from "typedoc";
 import {} from "typedoc-plugin-markdown";
-
-import react from "@astrojs/react";
 
 /** @type {import('typedoc').TypeDocOptions & import('typedoc-plugin-markdown').PluginOptions} */
 const typeDocConfigBaseOptions = {
@@ -45,7 +45,9 @@ async function generateDoc() {
 			...cfg,
 		};
 		/** @type {import('typedoc-plugin-markdown').MarkdownApplication} */
-		const app = await Application.bootstrapWithPlugins(config);
+		const app = /** @type {any} */ (
+			await Application.bootstrapWithPlugins(config)
+		);
 
 		/**
 		 * @param {import('typedoc').PageEvent} evt

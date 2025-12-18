@@ -34,8 +34,6 @@ export interface LyricWord {
 	word: string;
 	/** 单词的音译内容 */
 	romanWord: string;
-	/** 单词内容是否包含冒犯性的不雅用语 */
-	obscene: boolean;
 }
 
 /** 一行歌词，存储多个单词 */

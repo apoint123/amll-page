@@ -20,9 +20,7 @@
 		"astro": "^5.13.10",
 		"react": "catalog:",
 		"react-dom": "catalog:",
-		"sharp": "catalog:"
-	},
-	"devDependencies": {
+		"sharp": "catalog:",
 		"typedoc": "catalog:",
 		"typedoc-plugin-mark-react-functional-components": "^0.2.2",
 		"typedoc-plugin-markdown": "catalog:",

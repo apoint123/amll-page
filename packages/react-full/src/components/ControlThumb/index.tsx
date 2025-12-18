@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
-import { motion } from "framer-motion";
-import styles from "./index.module.css";
-import type { HTMLProps, FC } from "react";
 import classNames from "classnames";
+import { motion } from "framer-motion";
+import type { FC, HTMLProps } from "react";
+import { useRef, useState } from "react";
+import styles from "./index.module.css";
 
 export const ControlThumb: FC<
 	{
@@ -65,7 +65,7 @@ export const ControlThumb: FC<
 				onMouseMove={(evt) => {
 					onMouseMove(evt.nativeEvent);
 				}}
-				onHoverStart={(evt, info) => {
+				onHoverStart={(evt) => {
 					onMouseMove(evt);
 					hoveringRef.current = true;
 				}}

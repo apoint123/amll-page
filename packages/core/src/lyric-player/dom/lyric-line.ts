@@ -278,11 +278,11 @@ export class LyricLineEl extends LyricLineBase {
 	getLine() {
 		return this.lyricLine;
 	}
-	private _hide = true;
+	// private _hide = true;
 	private _prevParentEl: HTMLElement;
 	private lastStyle = "";
 	show() {
-		this._hide = false;
+		// this._hide = false;
 		if (!this.element.parentElement) {
 			this._prevParentEl.appendChild(this.element);
 			this.lyricPlayer.resizeObserver.observe(this.element);
@@ -295,7 +295,7 @@ export class LyricLineEl extends LyricLineBase {
 		this.rebuildStyle();
 	}
 	hide() {
-		this._hide = true;
+		// this._hide = true;
 		if (this.element.parentElement) {
 			this._prevParentEl.removeChild(this.element);
 			this.lyricPlayer.resizeObserver.unobserve(this.element);
@@ -375,7 +375,6 @@ export class LyricLineEl extends LyricLineBase {
 				startTime: Number.POSITIVE_INFINITY,
 				endTime: Number.NEGATIVE_INFINITY,
 				wordType: "normal",
-				obscene: false,
 			} as LyricWord,
 		);
 		const emp = chunk

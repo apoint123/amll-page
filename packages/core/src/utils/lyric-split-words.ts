@@ -26,7 +26,6 @@ export function chunkAndSplitLyricWords(
 					romanWord: "",
 					startTime: 0,
 					endTime: 0,
-					obscene: false,
 				});
 			}
 			let charPos = 0;
@@ -34,7 +33,6 @@ export function chunkAndSplitLyricWords(
 				const word: LyricWord = {
 					word: s,
 					romanWord: "",
-					obscene: w.obscene,
 					startTime:
 						w.startTime + (charPos / realLength) * (w.endTime - w.startTime),
 					endTime:
@@ -47,7 +45,6 @@ export function chunkAndSplitLyricWords(
 					romanWord: "",
 					startTime: 0,
 					endTime: 0,
-					obscene: false,
 				});
 				charPos += s.length;
 			}

@@ -7,6 +7,8 @@ import {
 	BackgroundRender,
 	LyricPlayer,
 	type LyricPlayerRef,
+	MeshGradientRenderer,
+	PixiRenderer,
 } from "@applemusic-like-lyrics/react";
 import structuredClone from "@ungap/structured-clone";
 import classNames from "classnames";
@@ -175,7 +177,6 @@ const PrebuiltMediaButtons: FC<{
 				return <RepeatOneActiveIcon color="#ffffffff" style={iconStyle} />;
 			case RepeatMode.All:
 				return <RepeatActiveIcon color="#ffffffff" style={iconStyle} />;
-			case RepeatMode.Off:
 			default:
 				return <RepeatIcon color="#ffffffff" style={iconStyle} />;
 		}
@@ -370,15 +371,7 @@ const PrebuiltCoreLyricPlayer: FC<{
 				];
 			}
 		}
-		return processed.map((line: any) => ({
-			...line,
-			words: Array.isArray(line.words)
-				? line.words.map((word: any) => ({
-						...word,
-						obscene: typeof word.obscene === "boolean" ? word.obscene : false,
-					}))
-				: [],
-		}));
+		return processed;
 	}, [
 		lyricLines,
 		enableLyricTranslationLine,
@@ -405,7 +398,7 @@ const PrebuiltCoreLyricPlayer: FC<{
 			enableBlur={enableLyricLineBlurEffect}
 			enableScale={enableLyricLineScaleEffect}
 			enableSpring={enableLyricLineSpringAnimation}
-			wordFadeWidth={Math.max(0.01, lyricWordFadeWidth)}
+			wordFadeWidth={lyricWordFadeWidth}
 			lyricPlayer={lyricPlayerImplementation}
 			onLyricLineClick={(evt) => onLyricLineClick?.(evt, amllPlayerRef.current)}
 			onLyricLineContextMenu={(evt) =>
@@ -621,7 +614,13 @@ export const PrebuiltLyricPlayer: FC<HTMLProps<HTMLDivElement>> = ({
 							lowFreqVolume={lowFreqVolume}
 							renderScale={lyricBackgroundRenderScale}
 							fps={lyricBackgroundFPS}
-							renderer={(backgroundRenderer as any).renderer}
+							renderer={
+								typeof backgroundRenderer.renderer === "string"
+									? backgroundRenderer.renderer === "pixi"
+										? PixiRenderer
+										: MeshGradientRenderer
+									: backgroundRenderer.renderer
+							}
 							staticMode={lyricBackgroundStaticMode || !isLyricPageOpened}
 							style={{
 								zIndex: -1,

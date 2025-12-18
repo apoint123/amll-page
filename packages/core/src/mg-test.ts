@@ -31,7 +31,7 @@ function updateControlPointDraggers() {
 	}
 }
 
-let draggerGui: GUI | undefined = undefined;
+let draggerGui: GUI | undefined;
 function setActiveDragger(x: number, y: number) {
 	if (draggerGui) {
 		draggerGui.destroy();
@@ -223,7 +223,7 @@ const stats = new Stats();
 stats.showPanel(0);
 stats.dom.style.left = "50px";
 document.body.appendChild(stats.dom);
-const frame = (time: number) => {
+const frame = () => {
 	stats.end();
 	stats.begin();
 	requestAnimationFrame(frame);

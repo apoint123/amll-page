@@ -764,7 +764,7 @@ export class MeshGradientRenderer extends BaseRenderer {
 	private gl: RenderingContext;
 	private lastFrameTime = 0;
 	private frameTime = 0;
-	private currentImageData?: ImageData;
+	// private currentImageData?: ImageData;
 	private lastTickTime = 0;
 	private smoothedVolume = 0;
 	private volume = 0;
@@ -949,7 +949,7 @@ export class MeshGradientRenderer extends BaseRenderer {
 			this.tickHandle = requestAnimationFrame(this.onTickBinded);
 	}
 
-	private supportTextureFloat = true;
+	// private supportTextureFloat = true;
 
 	constructor(canvas: HTMLCanvasElement) {
 		super(canvas);
@@ -960,12 +960,12 @@ export class MeshGradientRenderer extends BaseRenderer {
 			console.warn("EXT_color_buffer_float not supported");
 		if (!gl.getExtension("EXT_float_blend")) {
 			console.warn("EXT_float_blend not supported");
-			this.supportTextureFloat = false;
+			// this.supportTextureFloat = false;
 		}
 		if (!gl.getExtension("OES_texture_float_linear"))
 			console.warn("OES_texture_float_linear not supported");
 		if (!gl.getExtension("OES_texture_float")) {
-			this.supportTextureFloat = false;
+			// this.supportTextureFloat = false;
 			console.warn("OES_texture_float not supported");
 		}
 
@@ -1102,7 +1102,7 @@ export class MeshGradientRenderer extends BaseRenderer {
 			}
 
 			newMesh.updateMesh();
-			this.currentImageData = imageData;
+			// this.currentImageData = imageData;
 
 			const albumTexture = new GLTexture(this.gl, imageData);
 			const newState: MeshState = {

@@ -2,11 +2,11 @@ import bezier from "bezier-easing";
 import type { Disposable } from "../interfaces.ts";
 import { getVelocity } from "./derivative";
 
-export interface SpringParams {
-	mass: number; // = 1.0
-	damping: number; // = 10.0
-	stiffness: number; // = 100.0
-}
+// export interface SpringParams {
+// 	mass: number; // = 1.0
+// 	damping: number; // = 10.0
+// 	stiffness: number; // = 100.0
+// }
 
 type seconds = number;
 
@@ -25,7 +25,7 @@ export class WebAnimationSpring extends EventTarget implements Disposable {
 	private currentAnimation: Animation;
 	private targetPosition = 0;
 	private isStatic = true;
-	private params: Partial<SpringParams> = {};
+	// private params: Partial<SpringParams> = {};
 	private currentSolver: (t: seconds) => number = () => this.targetPosition;
 	private getV: (t: seconds) => number = () => 0;
 
