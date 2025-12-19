@@ -56,7 +56,11 @@ export const PRActionsTab = ({
 
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
-						<Button variant="ghost" size="1">
+						<Button
+							variant="ghost"
+							size="2"
+							style={{ marginRight: "1px", marginBottom: "0px" }}
+						>
 							<MagicWandIcon /> 插入回复模版
 						</Button>
 					</DropdownMenu.Trigger>
