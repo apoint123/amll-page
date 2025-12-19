@@ -5,6 +5,8 @@ import {
 	ClockIcon,
 	ExclamationTriangleIcon,
 	ExternalLinkIcon,
+	PersonIcon,
+	ReaderIcon,
 	ReloadIcon,
 } from "@radix-ui/react-icons";
 import {
@@ -229,7 +231,6 @@ export const Component = () => {
 				requestPlaySong.onEmit(0);
 
 				setAudioLoadStatus((prev) => ({ ...prev, [platformId]: "idle" }));
-				toast.success("开始播放");
 			} catch (e) {
 				console.error(e);
 				toast.error(`音频下载失败: ${e}`);
@@ -244,15 +245,15 @@ export const Component = () => {
 			if (!currentPrId) return;
 
 			if (event === "REQUEST_CHANGES" && !reviewComment.trim()) {
-				toast.error("打回 PR 时必须填写原因（评论）");
+				toast.error("打回 PR 时必须填写原因");
 				return;
 			}
 
 			setConfirmDialog({
 				open: true,
-				title: `确认提交 ${event === "APPROVE" ? "通过" : "打回"}?`,
-				description: "此操作将提交 Review 到 GitHub。",
-				actionLabel: "提交",
+				title: `确认${event === "APPROVE" ? "批准" : "打回"}此 PR 吗?`,
+				description: "同时也会将评论内容发布到PR中",
+				actionLabel: "确定",
 				onConfirm: async () => {
 					setActionLoading(true);
 					try {
@@ -280,9 +281,9 @@ export const Component = () => {
 
 		setConfirmDialog({
 			open: true,
-			title: "确认合并 PR?",
-			description: `确定要合并 PR #${currentPrId} 吗？合并后该 PR 将被关闭。`,
-			actionLabel: "合并",
+			title: `确认合并 #${currentPrId} 吗？`,
+			description: `这将把评论内容发布到PR中并关闭PR`,
+			actionLabel: "确定",
 			onConfirm: async () => {
 				setActionLoading(true);
 				try {
@@ -292,8 +293,8 @@ export const Component = () => {
 						try {
 							await service.submitReview(currentPrId, "COMMENT", reviewComment);
 						} catch (commentErr) {
-							console.warn("附言发送失败", commentErr);
-							toast.warn("PR 已合并，但附言发送失败");
+							console.warn("发送评论失败", commentErr);
+							toast.warn("PR 已合并，但评论发送失败");
 						}
 					} else {
 						toast.success("PR 已成功合并！");
@@ -449,13 +450,20 @@ export const Component = () => {
 											<Text
 												weight="bold"
 												size="2"
-												style={{ color: "var(--gray-12)" }}
+												style={{ color: "var(--gray-12)", opacity: 0.5 }}
 											>
 												#{pr.number}
 											</Text>
-											<Text size="1" color="gray">
-												{formatRelativeTime(pr.created_at)}
-											</Text>
+											<Flex align="center" gap="1">
+												<ClockIcon
+													width="11"
+													height="11"
+													style={{ opacity: 0.7 }}
+												/>
+												<Text size="1" color="gray">
+													{formatRelativeTime(pr.created_at)}
+												</Text>
+											</Flex>
 										</Flex>
 
 										<div
@@ -466,8 +474,13 @@ export const Component = () => {
 										</div>
 
 										<Flex align="center" gap="1">
+											<PersonIcon
+												width="11"
+												height="11"
+												style={{ opacity: 0.7 }}
+											/>
 											<Text size="1" color="gray">
-												by <span>{displayAuthor}</span>
+												{displayAuthor}
 											</Text>
 										</Flex>
 
@@ -653,8 +666,15 @@ export const Component = () => {
 						</Tabs.Root>
 					</Flex>
 				) : (
-					<Flex align="center" justify="center" style={{ height: "100%" }}>
-						<Text color="gray">请从左侧选择一个 PR 开始审核</Text>
+					<Flex
+						align="center"
+						justify="center"
+						direction="column"
+						gap="4"
+						style={{ height: "100%", opacity: 0.75 }}
+					>
+						<ReaderIcon width="64" height="64" />
+						<Text size="3">在左侧选择一个 PR 以开始审核</Text>
 					</Flex>
 				)}
 			</div>
