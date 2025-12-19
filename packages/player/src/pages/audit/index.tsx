@@ -1,4 +1,5 @@
 import {
+	ArrowLeftIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
 	ClockIcon,
@@ -31,7 +32,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { db } from "../../dexie";
 import {
@@ -95,6 +96,7 @@ const getPrAuthorName = (pr: GitHubPR) => {
 };
 
 export const Component = () => {
+	const navigate = useNavigate();
 	const token = useAtomValue(githubTokenAtom);
 	const repoConfig = useAtomValue(auditRepoConfigAtom);
 	const [currentPrId, setCurrentPrId] = useAtom(currentAuditPrIdAtom);
@@ -378,9 +380,22 @@ export const Component = () => {
 						borderBottom: "1px solid var(--gray-a4)",
 					}}
 				>
-					<Text weight="bold" size="3">
-						待审核 PR ({totalCount})
-					</Text>
+					<Flex align="center" gap="3">
+						<Tooltip content="返回上一页">
+							<IconButton
+								variant="ghost"
+								color="gray"
+								onClick={() => navigate(-1)}
+								style={{ margin: 0 }}
+							>
+								<ArrowLeftIcon width="20" height="20" />
+							</IconButton>
+						</Tooltip>
+
+						<Text weight="bold" size="3">
+							待审核 PR ({totalCount})
+						</Text>
+					</Flex>
 
 					<Tooltip content="刷新列表">
 						<IconButton
