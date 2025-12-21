@@ -1,0 +1,82 @@
+name: 构建 Web 版本
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - full-refractor
+  pull_request:
+    branches:
+      - main
+      - dev
+      - full-refractor
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 构建 Web 版本
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 克隆仓库
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 安装 PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: 安装 wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: "v0.13.1"
+
+      - name: 安装依赖
+        run: pnpm i --frozen-lockfile --ignore-scripts
+
+      - name: 构建库
+        run: pnpm build:libs
+        env:
+          AMLL_GITHUB_IS_ACTION: true
+
+      - name: 构建 Player Web 版本
+        run: pnpm nx build player
+        env:
+          AMLL_GITHUB_IS_ACTION: true
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: |
+            packages/player/dist/**
+          retention-days: 7
+
+      - name: 显示构建信息
+        run: |
+          echo "构建完成！"
+          echo "构建产物位置: packages/player/dist"
+          if [ -d "packages/player/dist" ]; then
+            echo "构建产物文件列表:"
+            ls -lh packages/player/dist/
+          fi
+
