@@ -27,21 +27,21 @@ import {
 function detectLyricFormat(url: string, content: string): string {
 	// 根据URL扩展名判断
 	const urlLower = url.toLowerCase();
-	if (urlLower.endsWith(".ttml") || urlLower.includes("ttml")) {
-		return "ttml";
-	}
-	if (urlLower.endsWith(".lrc") || urlLower.includes("lrc")) {
-		return "lrc";
-	}
-	if (urlLower.endsWith(".yrc") || urlLower.includes("yrc")) {
-		return "yrc";
-	}
-	if (urlLower.endsWith(".qrc") || urlLower.includes("qrc")) {
-		return "qrc";
-	}
-	if (urlLower.endsWith(".lys") || urlLower.includes("lys")) {
-		return "lys";
-	}
+    if (urlLower.endsWith(".ttml")) {
+        return "ttml";
+    }
+    if (urlLower.endsWith(".lrc")) {
+        return "lrc";
+    }
+    if (urlLower.endsWith(".yrc")) {
+        return "yrc";
+    }
+    if (urlLower.endsWith(".qrc")) {
+        return "qrc";
+    }
+    if (urlLower.endsWith(".lys")) {
+        return "lys";
+    }
 
 	// 根据内容判断
 	const contentTrimmed = content.trim();
