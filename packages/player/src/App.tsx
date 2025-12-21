@@ -20,6 +20,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { StateConnector } from "./components/StateConnector/index.tsx";
 import { StatsComponent } from "./components/StatsComponent/index.tsx";
+import { URLParamsHandler } from "./components/URLParamsHandler/index.tsx";
 import { router } from "./router.tsx";
 import {
 	displayLanguageAtom,
@@ -99,6 +100,7 @@ function App() {
 				<LocalMusicContext key={MusicContextMode.Local} />
 			)}
 
+			<URLParamsHandler />
 			<StateConnector />
 			<SpeedInsights />
 			<Analytics />
