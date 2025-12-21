@@ -14,7 +14,7 @@
 
 2. **URL参数**
    ```
-   https://amllp.bikonoo.com/?music=音乐链接&lyric=歌词链接&cover=封面链接&title=歌曲名&artist=艺术家
+   ?music=音乐链接&lyric=歌词链接&cover=封面链接&title=歌曲名&artist=艺术家
    ```
 
 ## 许可证
