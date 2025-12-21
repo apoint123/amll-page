@@ -1,4 +1,5 @@
 import {
+	AudioQualityType,
 	isLyricPageOpenedAtom,
 	musicArtistsAtom,
 	musicCoverAtom,
@@ -11,15 +12,18 @@ import { useSetAtom, useStore } from "jotai";
 import { type FC, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import { db } from "../../dexie.ts";
-import { extractMusicMetadata } from "../../utils/music-file.ts";
-import { mapMetadataToQuality } from "../../utils/quality.ts";
-import { webPlayer } from "../../utils/web-player.ts";
-import { hasURLParams, loadFileFromURL, parseURLParams } from "../../utils/url-params.ts";
-import { AudioQualityType } from "@applemusic-like-lyrics/react-full";
 import {
 	currentMusicIndexAtom,
 	currentMusicQueueAtom,
 } from "../../states/appAtoms.ts";
+import { extractMusicMetadata } from "../../utils/music-file.ts";
+import { mapMetadataToQuality } from "../../utils/quality.ts";
+import {
+	hasURLParams,
+	loadFileFromURL,
+	parseURLParams,
+} from "../../utils/url-params.ts";
+import { webPlayer } from "../../utils/web-player.ts";
 
 /**
  * 根据URL或内容检测歌词格式
@@ -27,21 +31,21 @@ import {
 function detectLyricFormat(url: string, content: string): string {
 	// 根据URL扩展名判断
 	const urlLower = url.toLowerCase();
-    if (urlLower.endsWith(".ttml")) {
-        return "ttml";
-    }
-    if (urlLower.endsWith(".lrc")) {
-        return "lrc";
-    }
-    if (urlLower.endsWith(".yrc")) {
-        return "yrc";
-    }
-    if (urlLower.endsWith(".qrc")) {
-        return "qrc";
-    }
-    if (urlLower.endsWith(".lys")) {
-        return "lys";
-    }
+	if (urlLower.endsWith(".ttml")) {
+		return "ttml";
+	}
+	if (urlLower.endsWith(".lrc")) {
+		return "lrc";
+	}
+	if (urlLower.endsWith(".yrc")) {
+		return "yrc";
+	}
+	if (urlLower.endsWith(".qrc")) {
+		return "qrc";
+	}
+	if (urlLower.endsWith(".lys")) {
+		return "lys";
+	}
 
 	// 根据内容判断
 	const contentTrimmed = content.trim();
@@ -89,7 +93,9 @@ export const URLParamsHandler: FC = () => {
 					new TextEncoder().encode(params.music),
 				);
 				const hashArray = Array.from(new Uint8Array(musicUrlHash));
-				const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+				const hashHex = hashArray
+					.map((b) => b.toString(16).padStart(2, "0"))
+					.join("");
 				const songId = `url-${hashHex.substring(0, 16)}`;
 
 				// 加载音乐文件
@@ -137,10 +143,13 @@ export const URLParamsHandler: FC = () => {
 				}
 
 				// 使用URL参数中的信息覆盖元数据
-				const songName = params.title || extractedMetadata.title || "Unknown Title";
-				const songArtists = params.artist || extractedMetadata.artist || "Unknown Artist";
+				const songName =
+					params.title || extractedMetadata.title || "Unknown Title";
+				const songArtists =
+					params.artist || extractedMetadata.artist || "Unknown Artist";
 				const songAlbum = extractedMetadata.album || "Unknown Album";
-				const finalCover = coverBlob.size > 0 ? coverBlob : extractedMetadata.cover;
+				const finalCover =
+					coverBlob.size > 0 ? coverBlob : extractedMetadata.cover;
 				const finalDuration = extractedMetadata.duration || 0;
 
 				// 如果URL参数中有歌词，使用URL参数中的歌词
@@ -199,9 +208,13 @@ export const URLParamsHandler: FC = () => {
 				store.set(currentMusicIndexAtom, 0);
 
 				// 加载并播放音乐
-				const file = new File([musicBlob], params.music.split("/").pop() || "music", {
-					type: musicBlob.type || "audio/mpeg",
-				});
+				const file = new File(
+					[musicBlob],
+					params.music.split("/").pop() || "music",
+					{
+						type: musicBlob.type || "audio/mpeg",
+					},
+				);
 				await webPlayer.load(file);
 				await webPlayer.play();
 				store.set(musicPlayingAtom, true);
@@ -215,7 +228,9 @@ export const URLParamsHandler: FC = () => {
 				// window.history.replaceState({}, "", window.location.pathname);
 			} catch (error) {
 				console.error("处理URL参数失败", error);
-				toast.error(`加载失败: ${error instanceof Error ? error.message : String(error)}`);
+				toast.error(
+					`加载失败: ${error instanceof Error ? error.message : String(error)}`,
+				);
 			}
 		};
 
@@ -224,4 +239,3 @@ export const URLParamsHandler: FC = () => {
 
 	return null;
 };
-

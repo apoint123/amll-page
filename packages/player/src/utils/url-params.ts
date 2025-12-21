@@ -40,6 +40,11 @@ export async function loadFileFromURL(url: string): Promise<Blob> {
  */
 export function hasURLParams(): boolean {
 	const params = parseURLParams();
-	return !!(params.music || params.lyric || params.cover || params.title || params.artist);
+	return !!(
+		params.music ||
+		params.lyric ||
+		params.cover ||
+		params.title ||
+		params.artist
+	);
 }
-
