@@ -1,0 +1,26 @@
+{
+	"name": "@lyrics-helper-rs/ttml-processor",
+	"version": "0.1.0",
+	"main": "pkg/ttml_processor.js",
+	"module": "pkg/ttml_processor.js",
+	"exports": {
+		".": "./pkg/ttml_processor.js"
+	},
+	"license": "MIT",
+	"nx": {
+		"tags": [
+			"library"
+		]
+	},
+	"scripts": {
+		"build": "wasm-pack build --release",
+		"build:dev": "wasm-pack build --dev",
+		"fmt": "cargo fmt"
+	},
+	"files": [
+		"pkg/*.wasm",
+		"pkg/*.js",
+		"pkg/*.d.ts"
+	],
+	"types": "pkg/ttml_processor.d.ts"
+}

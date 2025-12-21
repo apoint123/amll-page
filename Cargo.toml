@@ -1,6 +1,11 @@
 [workspace]
 resolver = "3"
-members = ["./packages/lyric", "./packages/fft", "./packages/ws-protocol"]
+members = [
+    "./packages/lyric",
+    "./packages/fft",
+    "./packages/ws-protocol",
+    "./packages/ttml-processor",
+]
 exclude = [
     "./packages/player-core",
     "./packages/player/src-tauri",

@@ -29,6 +29,7 @@ import {
 	musicContextModeAtom,
 	showStatJSFrameAtom,
 } from "./states/appAtoms.ts";
+import { ensureLoaded } from "./utils/parseTTML.ts";
 
 const AMLLWrapper = lazy(() => import("./components/AMLLWrapper"));
 
@@ -91,6 +92,8 @@ function App() {
             }
         `;
 	}, [lyricSize]);
+
+	ensureLoaded().catch((e) => console.error("WASM Preload Failed", e));
 
 	return (
 		<>
