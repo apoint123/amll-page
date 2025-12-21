@@ -1,7 +1,7 @@
 import type { LyricLine } from "@applemusic-like-lyrics/core";
 import {
-	type LyricLine as RawLyricLine,
 	parseTTML,
+	type LyricLine as RawLyricLine,
 } from "@applemusic-like-lyrics/lyric";
 import type { FC } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";

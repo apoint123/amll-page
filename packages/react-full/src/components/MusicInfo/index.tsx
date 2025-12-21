@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { memo, type HTMLProps } from "react";
+import { type HTMLProps, memo } from "react";
 import { MenuButton } from "../MenuButton";
 import { TextMarquee } from "../TextMarquee";
 import styles from "./index.module.css";

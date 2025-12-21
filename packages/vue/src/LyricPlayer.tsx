@@ -7,17 +7,17 @@ import {
 	type spring,
 } from "@applemusic-like-lyrics/core";
 import {
+	computed,
+	defineComponent,
 	type ExtractPublicPropTypes,
+	onMounted,
+	onUnmounted,
 	type PropType,
 	type Ref,
+	ref,
 	type ShallowRef,
 	type SlotsType,
 	Teleport,
-	computed,
-	defineComponent,
-	onMounted,
-	onUnmounted,
-	ref,
 	useTemplateRef,
 	watchEffect,
 } from "vue";

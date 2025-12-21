@@ -1,12 +1,12 @@
+import type React from "react";
 import type { HTMLProps } from "react";
-import React, {
+import {
 	forwardRef,
 	useImperativeHandle,
+	useLayoutEffect,
 	useRef,
 	useState,
 } from "react";
-
-import { useLayoutEffect } from "react";
 import styles from "./auto.module.css";
 import { HorizontalLayout } from "./horizontal";
 import { VerticalLayout } from "./vertical";

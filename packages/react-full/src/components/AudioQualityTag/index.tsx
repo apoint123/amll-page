@@ -1,6 +1,6 @@
 import classNames from "classnames";
-import { type Variants, motion } from "framer-motion";
-import { type HTMLProps, forwardRef, memo } from "react";
+import { motion, type Variants } from "framer-motion";
+import { forwardRef, type HTMLProps, memo } from "react";
 import IconDolbyAtmos from "./icon_dolby_atmos.svg?react";
 import LoselessIcon from "./icon_loseless.svg?react";
 import styles from "./index.module.css";

@@ -5,12 +5,13 @@ import {
 	MeshGradientRenderer,
 } from "@applemusic-like-lyrics/core";
 import {
-	type HTMLProps,
 	forwardRef,
+	type HTMLProps,
 	useEffect,
 	useImperativeHandle,
 	useRef,
 } from "react";
+
 export {
 	BaseRenderer,
 	MeshGradientRenderer,

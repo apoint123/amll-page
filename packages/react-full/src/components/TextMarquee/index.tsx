@@ -1,7 +1,7 @@
 import classNames from "classnames";
-import styles from "./index.module.css";
 import type { FC, HTMLProps, PropsWithChildren } from "react";
 import { memo, useRef } from "react";
+import styles from "./index.module.css";
 
 export const TextMarquee: FC<PropsWithChildren<HTMLProps<HTMLDivElement>>> =
 	memo(({ children, className, ...rest }) => {

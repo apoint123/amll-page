@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import type React from "react";
+import { useEffect, useRef } from "react";
 import { BouncingSlider, type SliderProps } from "../BouncingSlider";
 import IconSpeaker from "./icon_speaker.svg?react";
 import IconSpeaker3 from "./icon_speaker_3.svg?react";

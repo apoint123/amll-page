@@ -6,8 +6,8 @@
 import classNames from "classnames";
 import { Squircle } from "corner-smoothing";
 import {
-	type HTMLProps,
 	forwardRef,
+	type HTMLProps,
 	useEffect,
 	useImperativeHandle,
 	useLayoutEffect,
