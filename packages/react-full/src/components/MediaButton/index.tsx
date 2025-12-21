@@ -1,5 +1,5 @@
-import { memo, type FC, type HTMLProps, type PropsWithChildren } from "react";
 import classNames from "classnames";
+import { type FC, type HTMLProps, memo, type PropsWithChildren } from "react";
 import styles from "./index.module.css";
 
 export const MediaButton: FC<PropsWithChildren<HTMLProps<HTMLButtonElement>>> =

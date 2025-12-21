@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { type FC, type HTMLProps, type ReactNode, memo } from "react";
+import { type FC, type HTMLProps, memo, type ReactNode } from "react";
 import airplayIcon from "../IconButton/airplay.svg?react";
 import styles from "./index.module.css";
 import lyricsOffIcon from "./lyrics_off.svg?react";

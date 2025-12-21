@@ -1,3 +1,5 @@
+import { ContextMenu, Theme } from "@radix-ui/themes";
+import { Provider, useStore } from "jotai";
 import {
 	type FC,
 	useCallback,
@@ -8,27 +10,25 @@ import {
 } from "react";
 import { createRoot } from "react-dom/client";
 import { PrebuiltLyricPlayer } from "./components/PrebuiltLyricPlayer";
-import { Provider, useStore } from "jotai";
+import "@radix-ui/themes/styles.css";
+import type { LyricLine } from "@applemusic-like-lyrics/core";
 import {
-	hideLyricViewAtom,
+	parseLrc,
+	parseLys,
+	parseQrc,
+	parseTTML,
+	parseYrc,
+	type LyricLine as RawLyricLine,
+} from "@applemusic-like-lyrics/lyric";
+import { onRequestOpenMenuAtom } from "./states/callbacks";
+import { hideLyricViewAtom } from "./states/configAtoms";
+import {
 	musicAlbumNameAtom,
 	musicArtistsAtom,
 	musicCoverAtom,
 	musicLyricLinesAtom,
 	musicNameAtom,
-} from "@applemusic-like-lyrics/states";
-import { ContextMenu, Theme } from "@radix-ui/themes";
-import "@radix-ui/themes/styles.css";
-import { onRequestOpenMenuAtom } from "@applemusic-like-lyrics/states";
-import {
-	parseLrc,
-	parseQrc,
-	parseTTML,
-	parseYrc,
-	parseLys,
-	type LyricLine as RawLyricLine,
-} from "@applemusic-like-lyrics/lyric";
-import type { LyricLine } from "@applemusic-like-lyrics/core";
+} from "./states/dataAtoms";
 
 const mapLyric = (
 	line: RawLyricLine,
@@ -58,7 +58,7 @@ const App: FC = () => {
 						word: "Test",
 						startTime: 0,
 						endTime: 1000,
-						obscene: false,
+						romanWord: "",
 					},
 				],
 				startTime: 0,

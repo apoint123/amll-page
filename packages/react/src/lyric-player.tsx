@@ -6,8 +6,8 @@ import type {
 } from "@applemusic-like-lyrics/core";
 import { LyricPlayer as DefaultLyricPlayer } from "@applemusic-like-lyrics/core";
 import {
-	type HTMLProps,
 	forwardRef,
+	type HTMLProps,
 	useEffect,
 	useImperativeHandle,
 	useLayoutEffect,

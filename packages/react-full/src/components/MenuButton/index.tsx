@@ -1,7 +1,7 @@
-import { memo, type HTMLProps } from "react";
+import classNames from "classnames";
+import { type HTMLProps, memo } from "react";
 import IconMore from "./icon_more.svg?react";
 import styles from "./index.module.css";
-import classNames from "classnames";
 
 export const MenuButton: React.FC<HTMLProps<HTMLButtonElement>> = memo(
 	({ className, type, ...rest }) => {

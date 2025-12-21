@@ -4,9 +4,10 @@
  */
 
 import classNames from "classnames";
-import { type MotionProps, type Target, motion } from "framer-motion";
+import { type MotionProps, motion, type Target } from "framer-motion";
+import type React from "react";
 import type { HTMLProps } from "react";
-import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import styles from "./vertical.module.css";
 
 export const VerticalLayout: React.FC<
