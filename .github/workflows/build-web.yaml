@@ -1,4 +1,4 @@
-name: 构建 Web 版本（完整版）
+name: 构建 Web 版本
 
 on:
   push:
@@ -134,23 +134,3 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           du -sh packages/player/dist/* 2>/dev/null || echo "无法获取文件大小" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-
-  deploy-preview:
-    name: 部署预览（可选）
-    runs-on: ubuntu-latest
-    needs: [build]
-    if: github.event_name == 'pull_request'
-    
-    steps:
-      - name: 下载构建产物
-        uses: actions/download-artifact@v4
-        with:
-          name: web-build-${{ github.sha }}
-          path: packages/player/dist
-
-      - name: 显示预览信息
-        run: |
-          echo "预览构建已完成"
-          echo "构建产物已下载到 packages/player/dist"
-          echo "你可以使用 GitHub Pages 或其他服务来部署预览版本"
-
