@@ -5,7 +5,6 @@ import {
 	parseLrc,
 	parseLys,
 	parseQrc,
-	parseTTML,
 	parseYrc,
 } from "@applemusic-like-lyrics/lyric";
 import {
@@ -50,6 +49,7 @@ import {
 	onRequestPlaySongByIndexAtom,
 } from "../../states/appAtoms.ts";
 import { extractMusicMetadata } from "../../utils/music-file.ts";
+import { parseTTML } from "../../utils/parseTTML.ts";
 import { mapMetadataToQuality } from "../../utils/quality.ts";
 import { webPlayer } from "../../utils/web-player.ts";
 

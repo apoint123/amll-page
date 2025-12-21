@@ -244,6 +244,9 @@ importers:
       '@iconify/react':
         specifier: ^6.0.2
         version: 6.0.2(react@19.2.3)
+      '@lyrics-helper-rs/ttml-processor':
+        specifier: workspace:^
+        version: link:../ttml-processor
       '@million/lint':
         specifier: ^1.0.14
         version: 1.0.14(encoding@0.1.13)(rollup@4.52.5)
@@ -556,6 +559,8 @@ importers:
       vite-plugin-dts:
         specifier: ^4.3.0
         version: 4.5.4(@types/node@24.9.1)(rollup@4.52.5)(typescript@5.9.3)(vite@7.3.0(@types/node@24.9.1)(lightningcss@1.30.2)(sass@1.97.1)(yaml@2.8.1))
+
+  packages/ttml-processor: {}
 
   packages/vue:
     dependencies:
@@ -12488,7 +12493,7 @@ snapshots:
 
   '@vue/compiler-core@3.5.17':
     dependencies:
-      '@babel/parser': 7.28.4
+      '@babel/parser': 7.28.5
       '@vue/shared': 3.5.17
       entities: 4.5.0
       estree-walker: 2.0.2
@@ -13306,7 +13311,7 @@ snapshots:
   cosmiconfig@8.3.6(typescript@5.9.3):
     dependencies:
       import-fresh: 3.3.1
-      js-yaml: 4.1.0
+      js-yaml: 4.1.1
       parse-json: 5.2.0
       path-type: 4.0.0
     optionalDependencies:
