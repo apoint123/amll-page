@@ -46,8 +46,13 @@ import {
 	advanceLyricDynamicLyricTimeAtom,
 	currentMusicIndexAtom,
 	currentMusicQueueAtom,
+	lyricDBVersionAtom,
 	onRequestPlaySongByIndexAtom,
 } from "../../states/appAtoms.ts";
+import {
+	SyncStatus,
+	syncLyricsDatabase,
+} from "../../utils/lyric-sync-manager.ts";
 import { extractMusicMetadata } from "../../utils/music-file.ts";
 import { parseTTML } from "../../utils/parseTTML.ts";
 import { mapMetadataToQuality } from "../../utils/quality.ts";
@@ -155,15 +160,7 @@ const MusicQualityTagText: FC = () => {
 	return null;
 };
 
-const TTML_LOG_TAG = chalk.bgHex("#FF5577").hex("#FFFFFF")(" TTML DB ");
 const LYRIC_LOG_TAG = chalk.bgHex("#FF4444").hex("#FFFFFF")(" LYRIC ");
-
-interface GitHubContent {
-	name: string;
-	path: string;
-	type: "file" | "dir";
-	sha: string;
-}
 
 const LyricContext: FC = () => {
 	const musicId = useAtomValue(musicIdAtom);
@@ -172,157 +169,32 @@ const LyricContext: FC = () => {
 	);
 	const setLyricLines = useSetAtom(musicLyricLinesAtom);
 	const setHideLyricView = useSetAtom(hideLyricViewAtom);
+	const lastCommit = useAtomValue(lyricDBVersionAtom);
 	const song = useLiveQuery(() => db.songs.get(musicId), [musicId]);
+	const store = useStore();
+
+	console.debug(LYRIC_LOG_TAG, `歌词版本号:`, lastCommit);
 
 	useEffect(() => {
-		const sig = new AbortController();
-
-		console.log(TTML_LOG_TAG, "同步 TTML DB 歌词库中");
-
-		(async () => {
-			const fileListRes = await fetch(
-				"https://api.github.com/repos/Steve-xmh/amll-ttml-db/contents",
-				{
-					signal: sig.signal,
-					redirect: "follow",
-				},
-			);
-
-			if (fileListRes.status < 200 || fileListRes.status > 399) {
-				console.warn(
-					TTML_LOG_TAG,
-					"TTML DB 歌词库同步失败：获取根目录文件列表失败",
-					fileListRes.status,
-					fileListRes.statusText,
-				);
-				return;
+		syncLyricsDatabase(store).then((result) => {
+			switch (result.status) {
+				case SyncStatus.Updated:
+					console.log(
+						LYRIC_LOG_TAG,
+						`歌词库更新完成，新增 ${result.count} 个歌词`,
+					);
+					break;
+				// case SyncStatus.Skipped:
+				// 	console.log(LYRIC_LOG_TAG, "歌词库已是最新");
+				// 	break;
+				// case SyncStatus.Failed:
+				// 	console.warn(LYRIC_LOG_TAG, "歌词库同步失败", result.error);
+				// 	break;
+				// case SyncStatus.Empty:
+				// 	console.log(LYRIC_LOG_TAG, "远程歌词库为空");
+				// 	break;
 			}
-
-			const fileList: GitHubContent[] = await fileListRes.json();
-			const rawLyricsEntry = fileList.find(
-				(v) => v.name === "raw-lyrics" && v.type === "dir",
-			);
-
-			if (!rawLyricsEntry) {
-				console.warn(TTML_LOG_TAG, "未找到 raw-lyrics 目录");
-				return;
-			}
-			console.log(
-				TTML_LOG_TAG,
-				"raw-lyric 目录已找到，SHA 为",
-				rawLyricsEntry.sha,
-			);
-
-			const lyricFileListRes = await fetch(
-				`https://api.github.com/repos/Steve-xmh/amll-ttml-db/git/trees/${rawLyricsEntry.sha}`,
-				{
-					signal: sig.signal,
-					redirect: "follow",
-				},
-			);
-
-			if (lyricFileListRes.status < 200 || lyricFileListRes.status > 399) {
-				console.warn(
-					TTML_LOG_TAG,
-					"TTML DB 歌词库同步失败：获取 raw-lyrics 文件夹下的文件列表失败",
-					lyricFileListRes.status,
-					lyricFileListRes.statusText,
-				);
-				return;
-			}
-
-			const lyricFileList: { tree: GitHubContent[] } =
-				await lyricFileListRes.json();
-
-			const fileMap = Object.fromEntries(
-				lyricFileList.tree.map((v) => [v.path, v]),
-			);
-			console.log(fileMap);
-
-			const localFileList = new Set<string>();
-			const remoteFileList = new Set<string>(
-				lyricFileList.tree.map((v) => v.path),
-			);
-
-			await db.ttmlDB.each((obj) => {
-				localFileList.add(obj.name);
-			});
-
-			console.log(TTML_LOG_TAG, "本地已同步歌词数量", localFileList.size);
-			console.log(TTML_LOG_TAG, "远程仓库歌词数量", remoteFileList.size);
-
-			const shouldFetchList = remoteFileList.difference(localFileList);
-
-			console.log(
-				TTML_LOG_TAG,
-				"需要下载的歌词数量",
-				shouldFetchList.size,
-				shouldFetchList,
-			);
-
-			let synced = 0;
-			let errored = 0;
-
-			const fetchTasks = [];
-
-			// Safari 目前不支持对迭代器对象使用 map 方法
-			for (const fileName of shouldFetchList.keys()) {
-				if (!(fileName in fileMap)) continue;
-				fetchTasks.push(
-					(async () => {
-						const lyricRes = await fetch(
-							`https://raw.githubusercontent.com/Steve-xmh/amll-ttml-db/main/raw-lyrics/${fileMap[fileName].path}`,
-							{
-								signal: sig.signal,
-								redirect: "follow",
-							},
-						);
-
-						if (fileListRes.status < 200 || fileListRes.status > 399) {
-							console.warn(
-								"同步歌词文件",
-								fileName,
-								"失败",
-								fileListRes.status,
-								fileListRes.statusText,
-							);
-							errored++;
-							return;
-						}
-
-						const lyricContent = await lyricRes.text();
-
-						try {
-							const ttml = parseTTML(lyricContent);
-							db.ttmlDB.add({
-								name: fileName,
-								content: ttml,
-								raw: lyricContent,
-							});
-							synced++;
-						} catch (err) {
-							console.warn("下载并解析歌词文件", fileName, "失败", err);
-							errored++;
-						}
-					})(),
-				);
-			}
-
-			await Promise.all(fetchTasks);
-
-			console.log(
-				TTML_LOG_TAG,
-				"歌词同步完成，已同步 ",
-				synced,
-				" 首歌曲，有 ",
-				errored,
-				" 首歌词导入失败",
-			);
-		})();
-
-		return () => {
-			sig.abort("useEffect Cleared");
-		};
+		});
 	}, []);
 
 	useEffect(() => {
@@ -473,8 +345,6 @@ export const LocalMusicContext: FC = () => {
 				const qualityState = mapMetadataToQuality(metadata);
 
 				store.set(musicQualityAtom, qualityState);
-
-				console.log("音频质量", qualityState);
 			} catch (e) {
 				console.warn("解析音频质量失败", e);
 				store.set(musicQualityAtom, {
