@@ -1,5 +1,6 @@
 import { AUDIT_PLAYLIST_ID, db, type Playlist, type Song } from "../dexie";
 import { extractMusicMetadata } from "../utils/music-file";
+import { parseTTML } from "../utils/parseTTML";
 
 const MUSIC_API_BASE = "https://api.kxzjoker.cn/api/163_music";
 export type ReviewEvent = "APPROVE" | "REQUEST_CHANGES" | "COMMENT";
@@ -155,10 +156,16 @@ export class AuditService {
 	}
 
 	private extractNeteaseIds(ttml: string): string[] {
-		const regex =
-			/<amll:meta\s+[^>]*?key=["']ncmMusicId["'][^>]*?value=["']([^"']+)["']/g;
-		const matches = [...ttml.matchAll(regex)];
-		return [...new Set(matches.map((m) => m[1]))];
+		try {
+			const ttmlResult = parseTTML(ttml);
+
+			const ncmMeta = ttmlResult.metadata.find(([key]) => key === "ncmMusicId");
+
+			return ncmMeta ? ncmMeta[1] : [];
+		} catch (error) {
+			console.error("TTML 解析失败:", error);
+			return [];
+		}
 	}
 
 	async fetchPRTtml(
