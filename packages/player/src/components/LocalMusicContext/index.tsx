@@ -26,8 +26,6 @@ import {
 	musicVolumeAtom,
 	onChangeVolumeAtom,
 	onClickControlThumbAtom,
-	onClickLeftFunctionButtonAtom,
-	onClickRightFunctionButtonAtom,
 	onLyricLineClickAtom,
 	onPlayOrResumeAtom,
 	onRequestNextSongAtom,
@@ -435,22 +433,6 @@ export const LocalMusicContext: FC = () => {
 				);
 			}),
 		);
-		store.set(
-			onClickLeftFunctionButtonAtom,
-			toEmit(() => {
-				toast.info(
-					t("amll.buttonForDisplayOnly", "此按钮仅供展示用途，暂无实际功能"),
-				);
-			}),
-		);
-		store.set(
-			onClickRightFunctionButtonAtom,
-			toEmit(() => {
-				toast.info(
-					t("amll.buttonForDisplayOnly", "此按钮仅供展示用途，暂无实际功能"),
-				);
-			}),
-		);
 
 		const handleLoaded = async () => {
 			const durationSec = webPlayer.duration;
@@ -533,8 +515,6 @@ export const LocalMusicContext: FC = () => {
 			store.set(onChangeVolumeAtom, doNothing);
 			store.set(onRequestPlaySongByIndexAtom, doNothing);
 			store.set(onRequestOpenMenuAtom, doNothing);
-			store.set(onClickLeftFunctionButtonAtom, doNothing);
-			store.set(onClickRightFunctionButtonAtom, doNothing);
 		};
 	}, [store, t, musicPlaying, setMusicPlaying]);
 
