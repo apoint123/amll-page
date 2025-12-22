@@ -162,3 +162,8 @@ export const onRequestPlaySongByIndexAtom = atom<{
 }>({
 	onEmit: () => {},
 });
+
+/**
+ * 控制音质详情对话框是否打开
+ */
+export const audioQualityDialogOpenedAtom = atom(false);

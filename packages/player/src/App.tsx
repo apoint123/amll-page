@@ -1,7 +1,7 @@
 import { Box, Theme } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
 import classNames from "classnames";
-import { atom, useAtomValue } from "jotai";
+import { atom, useAtomValue, useStore } from "jotai";
 import { lazy, StrictMode, Suspense, useEffect, useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { RouterProvider } from "react-router-dom";
@@ -15,6 +15,7 @@ import {
 	isLyricPageOpenedAtom,
 	LyricSizePreset,
 	lyricSizePresetAtom,
+	onClickAudioQualityTagAtom,
 } from "@applemusic-like-lyrics/react-full";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -23,6 +24,7 @@ import { StatsComponent } from "./components/StatsComponent/index.tsx";
 import { URLParamsHandler } from "./components/URLParamsHandler/index.tsx";
 import { router } from "./router.tsx";
 import {
+	audioQualityDialogOpenedAtom,
 	displayLanguageAtom,
 	isDarkThemeAtom,
 	MusicContextMode,
@@ -36,6 +38,7 @@ const AMLLWrapper = lazy(() => import("./components/AMLLWrapper"));
 const hasBackgroundAtom = atom(false);
 
 function App() {
+	const store = useStore();
 	const isLyricPageOpened = useAtomValue(isLyricPageOpenedAtom);
 	const showStatJSFrame = useAtomValue(showStatJSFrameAtom);
 	const musicContextMode = useAtomValue(musicContextModeAtom);
@@ -50,6 +53,14 @@ function App() {
 		console.log("displayLanguage", displayLanguage, i18n);
 		i18n.changeLanguage(displayLanguage);
 	}, [i18n, displayLanguage]);
+
+	useEffect(() => {
+		store.set(onClickAudioQualityTagAtom, {
+			onEmit() {
+				store.set(audioQualityDialogOpenedAtom, true);
+			},
+		});
+	}, [store]);
 
 	useEffect(() => {
 		let fontSizeFormula = "";
