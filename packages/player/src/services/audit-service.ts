@@ -225,6 +225,8 @@ export class AuditService {
 			romanLrc: "",
 		};
 
+		await db.auditMetadata.where({ prId: pr.number }).delete();
+
 		await db.songs.put(song);
 
 		await db.auditMetadata.put({
