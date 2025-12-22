@@ -11,7 +11,7 @@
 	"scripts": {
 		"build:libs": "nx run-many --target=build --projects=tag:library"
 	},
-	"packageManager": "pnpm@10.18.3",
+	"packageManager": "pnpm@10.26.1",
 	"pnpm": {
 		"onlyBuiltDependencies": [
 			"@applemusic-like-lyrics/lyric",
