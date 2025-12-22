@@ -76,14 +76,22 @@ export class AuditService {
 
 	async fetchPullRequests(page: number = 1): Promise<GitHubPR[]> {
 		const url = `https://api.github.com/repos/${this.owner}/${this.repo}/pulls?state=open&sort=created&direction=desc&page=${page}&per_page=30`;
-		const res = await fetch(url, { headers: this.authHeaders });
+
+		const res = await fetch(url, {
+			headers: this.authHeaders,
+			cache: "no-store",
+		});
+
 		if (!res.ok) throw new Error(`GitHub API Error: ${res.statusText}`);
 		return await res.json();
 	}
 
 	async fetchPRFiles(prNumber: number): Promise<GitHubFile[]> {
 		const url = `https://api.github.com/repos/${this.owner}/${this.repo}/pulls/${prNumber}/files`;
-		const res = await fetch(url, { headers: this.authHeaders });
+		const res = await fetch(url, {
+			headers: this.authHeaders,
+			cache: "no-store",
+		});
 		if (!res.ok) throw new Error(`GitHub API Error: ${res.statusText}`);
 		return await res.json();
 	}
