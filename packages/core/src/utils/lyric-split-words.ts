@@ -19,7 +19,7 @@ export function chunkAndSplitLyricWords(
 	for (const w of words) {
 		const realLength = w.word.replace(/\s/g, "").length;
 		const splited = w.word.split(" ").filter((v) => v.trim().length > 0);
-		if (splited.length > 1) {
+		if (splited.length > 1 && !w.romanWord) {
 			if (w.word.startsWith(" ")) {
 				resplitedWords.push({
 					word: " ",

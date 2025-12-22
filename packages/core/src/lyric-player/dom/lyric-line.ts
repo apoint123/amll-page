@@ -397,6 +397,14 @@ export class LyricLineEl extends LyricLineBase {
 					characterElements.push(charEl);
 					mainWordEl.appendChild(charEl);
 				}
+
+				if (word.romanWord && word.romanWord.trim().length > 0) {
+					const romanWordEl = document.createElement("div");
+					romanWordEl.innerText = word.romanWord;
+					romanWordEl.classList.add(styles.romanWord);
+					mainWordEl.appendChild(romanWordEl);
+				}
+
 				const realWord: RealWord = {
 					...word,
 					mainElement: mainWordEl,
