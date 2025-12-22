@@ -91,16 +91,6 @@ export const onLyricLineContextMenuAtom = atom(
 export const onChangeVolumeAtom = atom(c((_volume: number) => {}));
 
 /**
- * 当点击位于主控制按钮左侧的功能按钮时触发。
- */
-export const onClickLeftFunctionButtonAtom = atom(c(() => {}));
-
-/**
- * 当点击位于主控制按钮右侧的功能按钮时触发。
- */
-export const onClickRightFunctionButtonAtom = atom(c(() => {}));
-
-/**
  * 当用户请求切换随机播放模式时触发。
  */
 export const onToggleShuffleAtom = atom(c(() => {}));
