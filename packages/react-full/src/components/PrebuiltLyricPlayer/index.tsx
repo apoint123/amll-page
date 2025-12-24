@@ -49,7 +49,6 @@ import ShuffleActiveIcon from "./shuffle-active.svg?react";
 
 import "./icon-animations.css";
 import React from "react";
-import { useThrottle } from "../../hook/useThrottle";
 import {
 	onChangeVolumeAtom,
 	onClickAudioQualityTagAtom,
@@ -414,11 +413,6 @@ const PrebuiltVolumeControl: FC<{
 	const musicVolume = useAtomValue(musicVolumeAtom);
 	const onChangeVolume = useAtomValue(onChangeVolumeAtom).onEmit;
 	const showVolumeControl = useAtomValue(showVolumeControlAtom);
-
-	const throttledOnChangeVolume = useThrottle((volume: number) => {
-		onChangeVolume?.(volume);
-	}, 100);
-
 	if (showVolumeControl)
 		return (
 			<VolumeControl
@@ -427,7 +421,7 @@ const PrebuiltVolumeControl: FC<{
 				max={1}
 				style={style}
 				className={className}
-				onChange={throttledOnChangeVolume}
+				onChange={onChangeVolume}
 			/>
 		);
 	return null;
