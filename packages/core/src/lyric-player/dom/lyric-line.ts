@@ -225,6 +225,10 @@ export class LyricLineEl extends LyricLineBase {
 					a.play();
 				}
 			}
+
+			for (const a of word.maskAnimations) {
+				a.pause();
+			}
 		}
 		main.classList.remove(styles.active);
 	}

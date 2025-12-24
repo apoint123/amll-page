@@ -400,7 +400,11 @@ const PrebuiltCoreLyricPlayer: FC<{
 			enableSpring={enableLyricLineSpringAnimation}
 			wordFadeWidth={lyricWordFadeWidth}
 			lyricPlayer={lyricPlayerImplementation}
-			onLyricLineClick={(evt) => onLyricLineClick?.(evt, amllPlayerRef.current)}
+			onLyricLineClick={(evt) => {
+				const targetTime = evt.line.getLine().startTime;
+				amllPlayerRef.current?.lyricPlayer?.setCurrentTime(targetTime, true);
+				onLyricLineClick?.(evt, amllPlayerRef.current);
+			}}
 			onLyricLineContextMenu={(evt) =>
 				onLyricLineContextMenu?.(evt, amllPlayerRef.current)
 			}

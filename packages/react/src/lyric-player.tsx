@@ -267,10 +267,10 @@ export const LyricPlayer = forwardRef<
 
 		useEffect(() => {
 			if (currentTime !== undefined) {
-				corePlayer?.setCurrentTime(currentTime);
+				corePlayer?.setCurrentTime(currentTime, isSeeking);
 				currentTimeRef.current = currentTime;
 			} else corePlayer?.setCurrentTime(0);
-		}, [corePlayer, currentTime]);
+		}, [corePlayer, currentTime, isSeeking]);
 
 		useEffect(() => {
 			corePlayer?.setIsSeeking(!!isSeeking);

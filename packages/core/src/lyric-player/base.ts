@@ -613,6 +613,11 @@ export abstract class LyricPlayerBase
 			}
 		}
 		if (isSeek) {
+			this.bufferedLines.clear();
+			for (const v of this.hotLines) {
+				this.bufferedLines.add(v);
+			}
+
 			if (this.bufferedLines.size > 0) {
 				this.scrollToIndex = Math.min(...this.bufferedLines);
 			} else {
@@ -620,10 +625,8 @@ export abstract class LyricPlayerBase
 					(line) => line.startTime >= time,
 				);
 			}
-			this.bufferedLines.clear();
-			for (const v of this.hotLines) {
-				this.bufferedLines.add(v);
-			}
+
+			this.resetScroll();
 			this.calcLayout();
 		} else if (removedIds.size > 0 || addedIds.size > 0) {
 			if (removedIds.size === 0 && addedIds.size > 0) {
