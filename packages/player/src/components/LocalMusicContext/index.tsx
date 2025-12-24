@@ -42,7 +42,7 @@ import {
 import chalk from "chalk";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
-import { type FC, useEffect, useLayoutEffect } from "react";
+import { type FC, useEffect, useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { db } from "../../dexie.ts";
@@ -338,14 +338,19 @@ export const LocalMusicContext: FC = () => {
 	const [musicPlaying, setMusicPlaying] = useAtom(musicPlayingAtom);
 	const [, setOriginalQueue] = useAtom(originalQueueAtom);
 
+	const savedMusicId = useAtomValue(musicIdAtom);
+	const savedPosition = useAtomValue(musicPlayingPositionAtom);
+	const savedVolume = useAtomValue(musicVolumeAtom);
+	const [hasRestored, setHasRestored] = useState(false);
+
 	useEffect(() => {
+		webPlayer.setVolume(savedVolume);
+	}, [savedVolume]);
+
+	useEffect(() => {
+		if (hasRestored) return;
+
 		const restorePlaybackState = async () => {
-			const savedMusicId = store.get(musicIdAtom);
-			const savedPosition = store.get(musicPlayingPositionAtom);
-			const savedVolume = store.get(musicVolumeAtom);
-
-			webPlayer.setVolume(savedVolume);
-
 			if (savedMusicId) {
 				const song = await db.songs.get(savedMusicId);
 				if (song && song.file instanceof Blob) {
@@ -376,8 +381,16 @@ export const LocalMusicContext: FC = () => {
 			}
 		};
 
-		restorePlaybackState();
-	}, []);
+		if (savedPosition) {
+			restorePlaybackState();
+			setHasRestored(true);
+		} else {
+			const timer = setTimeout(() => {
+				setHasRestored(true);
+			}, 500);
+			return () => clearTimeout(timer);
+		}
+	}, [savedMusicId, savedPosition, hasRestored, store]);
 
 	useEffect(() => {
 		const toEmit = <T,>(onEmit: T) => ({ onEmit });
