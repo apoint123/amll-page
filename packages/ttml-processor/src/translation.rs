@@ -184,118 +184,120 @@ pub fn convert_to_amll_lyrics(source_data: &helper_types::ParsedSourceData) -> V
                 .iter()
                 .find(|t| t.content_type == helper_types::ContentType::Main);
 
-            let main_line_iter = main_annotated_track
-                .and_then(|main_track| {
-                    let main_syllables: Vec<_> = main_track
-                        .content
-                        .words
-                        .iter()
-                        .flat_map(|w| &w.syllables)
-                        .cloned()
-                        .collect();
+            let mut main_line = main_annotated_track.and_then(|main_track| {
+                let main_syllables: Vec<_> = main_track
+                    .content
+                    .words
+                    .iter()
+                    .flat_map(|w| &w.syllables)
+                    .cloned()
+                    .collect();
 
-                    if main_syllables.is_empty() {
-                        return None;
-                    }
+                if main_syllables.is_empty() {
+                    return None;
+                }
 
-                    let (words, translated_lyric, roman_lyric) = extract_line_components(
-                        &main_syllables,
-                        &main_track.translations,
-                        &main_track.romanizations,
-                        is_instrumental,
-                    );
+                let (words, translated_lyric, roman_lyric) = extract_line_components(
+                    &main_syllables,
+                    &main_track.translations,
+                    &main_track.romanizations,
+                    is_instrumental,
+                );
 
-                    let start_time = words
-                        .iter()
-                        .map(|s| s.start_time)
-                        .fold(f64::INFINITY, f64::min);
+                let start_time = words
+                    .iter()
+                    .map(|s| s.start_time)
+                    .fold(f64::INFINITY, f64::min);
 
-                    let end_time = words
-                        .iter()
-                        .map(|s| s.end_time)
-                        .fold(f64::NEG_INFINITY, f64::max);
+                let end_time = words
+                    .iter()
+                    .map(|s| s.end_time)
+                    .fold(f64::NEG_INFINITY, f64::max);
 
-                    let final_start = if start_time.is_infinite() {
-                        helper_line.start_ms as f64
-                    } else {
-                        start_time
-                    };
-                    let final_end = if end_time.is_infinite() {
-                        helper_line.end_ms as f64
-                    } else {
-                        end_time
-                    };
+                let final_start = if start_time.is_infinite() {
+                    helper_line.start_ms as f64
+                } else {
+                    start_time
+                };
+                let final_end = if end_time.is_infinite() {
+                    helper_line.end_ms as f64
+                } else {
+                    end_time
+                };
 
-                    Some(JsLyricLine {
-                        start_time: final_start,
-                        end_time: final_end,
-                        words,
-                        translated_lyric,
-                        roman_lyric,
-                        is_bg: false,
-                        is_duet: current_line_is_duet,
-                    })
+                Some(JsLyricLine {
+                    start_time: final_start,
+                    end_time: final_end,
+                    words,
+                    translated_lyric,
+                    roman_lyric,
+                    is_bg: false,
+                    is_duet: current_line_is_duet,
                 })
-                .into_iter();
+            });
 
             let background_annotated_track = helper_line
                 .tracks
                 .iter()
                 .find(|t| t.content_type == helper_types::ContentType::Background);
 
-            let background_line_iter = background_annotated_track
-                .and_then(|bg_track| {
-                    let bg_syllables: Vec<_> = bg_track
-                        .content
-                        .words
-                        .iter()
-                        .flat_map(|w| &w.syllables)
-                        .cloned()
-                        .collect();
-                    if bg_syllables.is_empty() {
-                        return None;
-                    }
+            let bg_line = background_annotated_track.and_then(|bg_track| {
+                let bg_syllables: Vec<_> = bg_track
+                    .content
+                    .words
+                    .iter()
+                    .flat_map(|w| &w.syllables)
+                    .cloned()
+                    .collect();
+                if bg_syllables.is_empty() {
+                    return None;
+                }
 
-                    let (bg_words, bg_translation, bg_romanization) = extract_line_components(
-                        &bg_syllables,
-                        &bg_track.translations,
-                        &bg_track.romanizations,
-                        false,
-                    );
+                let (bg_words, bg_translation, bg_romanization) = extract_line_components(
+                    &bg_syllables,
+                    &bg_track.translations,
+                    &bg_track.romanizations,
+                    false,
+                );
 
-                    let start_time = bg_words
-                        .iter()
-                        .map(|s| s.start_time)
-                        .fold(f64::INFINITY, f64::min);
-                    let end_time = bg_words
-                        .iter()
-                        .map(|s| s.end_time)
-                        .fold(f64::NEG_INFINITY, f64::max);
+                let start_time = bg_words
+                    .iter()
+                    .map(|s| s.start_time)
+                    .fold(f64::INFINITY, f64::min);
+                let end_time = bg_words
+                    .iter()
+                    .map(|s| s.end_time)
+                    .fold(f64::NEG_INFINITY, f64::max);
 
-                    let final_start = if start_time.is_infinite() {
-                        helper_line.start_ms as f64
-                    } else {
-                        start_time
-                    };
-                    let final_end = if end_time.is_infinite() {
-                        helper_line.end_ms as f64
-                    } else {
-                        end_time
-                    };
+                let final_start = if start_time.is_infinite() {
+                    helper_line.start_ms as f64
+                } else {
+                    start_time
+                };
+                let final_end = if end_time.is_infinite() {
+                    helper_line.end_ms as f64
+                } else {
+                    end_time
+                };
 
-                    Some(JsLyricLine {
-                        start_time: final_start,
-                        end_time: final_end,
-                        words: bg_words,
-                        translated_lyric: bg_translation,
-                        roman_lyric: bg_romanization,
-                        is_bg: true,
-                        is_duet: current_line_is_duet,
-                    })
+                Some(JsLyricLine {
+                    start_time: final_start,
+                    end_time: final_end,
+                    words: bg_words,
+                    translated_lyric: bg_translation,
+                    roman_lyric: bg_romanization,
+                    is_bg: true,
+                    is_duet: current_line_is_duet,
                 })
-                .into_iter();
+            });
 
-            main_line_iter.chain(background_line_iter)
+            if let (Some(main), Some(bg)) = (&mut main_line, &bg_line)
+                && bg.end_time > main.end_time
+            {
+                main.end_time = bg.end_time;
+            }
+
+            main_line.into_iter().chain(bg_line)
         })
         .collect()
 }
