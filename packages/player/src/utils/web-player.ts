@@ -101,7 +101,11 @@ export class WebPlayer extends TypedEventTarget<WebPlayerEventMap> {
 
 	seek(time: number) {
 		if (Number.isFinite(time)) {
-			this.audioElement.currentTime = time;
+			const duration = this.duration;
+
+			const maxSeekTime = Math.max(0, duration - 0.5);
+
+			this.audioElement.currentTime = Math.min(time, maxSeekTime);
 		}
 	}
 
