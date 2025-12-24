@@ -114,9 +114,6 @@ importers:
       '@applemusic-like-lyrics/lyric':
         specifier: ^0.2.4
         version: 0.2.4
-      '@applemusic-like-lyrics/ttml':
-        specifier: workspace:^
-        version: link:../ttml
       '@biomejs/biome':
         specifier: 'catalog:'
         version: 2.3.10
@@ -217,9 +214,6 @@ importers:
       '@applemusic-like-lyrics/core':
         specifier: workspace:^
         version: link:../core
-      '@applemusic-like-lyrics/fft':
-        specifier: workspace:^
-        version: link:../fft
       '@applemusic-like-lyrics/lyric':
         specifier: workspace:^
         version: link:../lyric
@@ -229,9 +223,6 @@ importers:
       '@applemusic-like-lyrics/react-full':
         specifier: workspace:^
         version: link:../react-full
-      '@applemusic-like-lyrics/ws-protocol':
-        specifier: workspace:^
-        version: link:../ws-protocol
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
