@@ -869,6 +869,19 @@ export class LyricLineEl extends LyricLineBase {
 	getElement() {
 		return this.element;
 	}
+
+	private updateMaskAlpha(scale: number) {
+		const factor = Math.max(0.0, Math.min(1.0, (scale - 0.97) / 0.03));
+		this.element.style.setProperty(
+			"--bright-mask-alpha",
+			`${factor * 0.8 + 0.2}`,
+		);
+		this.element.style.setProperty(
+			"--dark-mask-alpha",
+			`${factor * 0.2 + 0.2}`,
+		);
+	}
+
 	override setTransform(
 		top: number = this.top,
 		scale: number = this.scale,
@@ -910,6 +923,8 @@ export class LyricLineEl extends LyricLineBase {
 			// 	requestAnimationFrame(() => {
 			// 		this.element.classList.remove(styles.tmpDisableTransition);
 			// 	});
+			const currentScale = this.lineTransforms.scale.getCurrentPosition();
+			this.updateMaskAlpha(currentScale / 100);
 		} else {
 			// this.lineWebAnimationTransforms.posX.stop();
 			// this.lineWebAnimationTransforms.posY.stop();
@@ -923,6 +938,7 @@ export class LyricLineEl extends LyricLineBase {
 			}
 		}
 	}
+
 	update(delta = 0) {
 		if (!this.lyricPlayer.getEnableSpring()) return;
 		this.lineTransforms.posY.update(delta);
@@ -932,34 +948,10 @@ export class LyricLineEl extends LyricLineBase {
 		} else {
 			this.hide();
 		}
+
 		if (this.lyricPlayer.getEnableSpring()) {
-			this.element.style.setProperty(
-				"--bright-mask-alpha",
-				`${
-					Math.max(
-						0.0,
-						Math.min(
-							1.0,
-							this.lineTransforms.scale.getCurrentPosition() / 100 - 0.97,
-						) / 0.03,
-					) *
-						0.8 +
-					0.2
-				}`,
-			);
-			this.element.style.setProperty(
-				"--dark-mask-alpha",
-				`${
-					Math.max(
-						0.0,
-						Math.min(
-							1.0,
-							this.lineTransforms.scale.getCurrentPosition() / 100 - 0.97,
-						) / 0.03,
-					) *
-						0.2 +
-					0.2
-				}`,
+			this.updateMaskAlpha(
+				this.lineTransforms.scale.getCurrentPosition() / 100,
 			);
 		} else {
 			const computedStyle = window.getComputedStyle(this.element);
@@ -967,15 +959,7 @@ export class LyricLineEl extends LyricLineBase {
 
 			// Extract the scale value from the transform property
 			const scale = getScaleFromTransform(transform);
-
-			this.element.style.setProperty(
-				"--bright-mask-alpha",
-				`${Math.max(0.0, Math.min(1.0, (scale - 0.97) / 0.03)) * 0.8 + 0.2}`,
-			);
-			this.element.style.setProperty(
-				"--dark-mask-alpha",
-				`${Math.max(0.0, Math.min(1.0, (scale - 0.97) / 0.03)) * 0.2 + 0.2}`,
-			);
+			this.updateMaskAlpha(scale);
 		}
 	}
 
