@@ -194,17 +194,21 @@ export class LyricLineEl extends LyricLineBase {
 		this.isEnabled = true;
 		this.element.classList.add(styles.active);
 		const main = this.element.children[0] as HTMLDivElement;
+
+		const relativeTime = Math.max(
+			0,
+			maskAnimationTime - this.lyricLine.startTime,
+		);
+
 		for (const word of this.splittedWords) {
 			for (const a of word.elementAnimations) {
-				a.currentTime = 0;
+				a.currentTime = relativeTime;
 				a.playbackRate = 1;
 				a.play();
 			}
+
 			for (const a of word.maskAnimations) {
-				a.currentTime = Math.min(
-					this.totalDuration,
-					Math.max(0, maskAnimationTime - this.lyricLine.startTime),
-				);
+				a.currentTime = Math.min(this.totalDuration, relativeTime);
 				a.playbackRate = 1;
 				a.play();
 			}
