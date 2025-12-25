@@ -13,7 +13,7 @@ import {
 import structuredClone from "@ungap/structured-clone";
 import classNames from "classnames";
 import { AnimatePresence, LayoutGroup } from "framer-motion";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
 	type FC,
 	type HTMLProps,
@@ -245,6 +245,10 @@ const TotalDurationLabel: FC = () => {
 	return <>{time}</>;
 };
 
+const manualSeekTriggerAtom = atom<{ time: number; timestamp: number } | null>(
+	null,
+);
+
 const PrebuiltProgressBar: FC = React.memo(() => {
 	const musicDuration = useAtomValue(musicDurationAtom);
 	const musicPosition = useAtomValue(musicPlayingPositionAtom);
@@ -254,6 +258,7 @@ const PrebuiltProgressBar: FC = React.memo(() => {
 		onClickAudioQualityTagAtom,
 	).onEmit;
 	const onSeekPosition = useAtomValue(onSeekPositionAtom).onEmit;
+	const setManualSeekTrigger = useSetAtom(manualSeekTriggerAtom);
 
 	const [showRemaining, setShowRemaining] = useAtom(showRemainingTimeAtom);
 
@@ -270,6 +275,11 @@ const PrebuiltProgressBar: FC = React.memo(() => {
 		[fontFamily, fontWeight, letterSpacing],
 	);
 
+	const handleSeek = (position: number) => {
+		onSeekPosition?.(position);
+		setManualSeekTrigger({ time: position, timestamp: Date.now() });
+	};
+
 	return (
 		<div>
 			<BouncingSlider
@@ -277,7 +287,7 @@ const PrebuiltProgressBar: FC = React.memo(() => {
 				min={0}
 				max={musicDuration}
 				value={musicPosition}
-				onChange={onSeekPosition}
+				onChange={handleSeek}
 			/>
 			<div className={styles.progressBarLabels}>
 				<div style={fontStyle}>
@@ -344,6 +354,7 @@ const PrebuiltCoreLyricPlayer: FC<{
 	const onLyricLineContextMenu = useAtomValue(
 		onLyricLineContextMenuAtom,
 	).onEmit;
+	const manualSeekTrigger = useAtomValue(manualSeekTriggerAtom);
 
 	const processedLyricLines = useMemo(() => {
 		const processed = structuredClone(lyricLines);
@@ -372,6 +383,15 @@ const PrebuiltCoreLyricPlayer: FC<{
 		enableLyricRomanLine,
 		enableLyricSwapTransRomanLine,
 	]);
+
+	useEffect(() => {
+		if (manualSeekTrigger) {
+			amllPlayerRef.current?.lyricPlayer?.setCurrentTime(
+				manualSeekTrigger.time,
+				true,
+			);
+		}
+	}, [manualSeekTrigger]);
 
 	return (
 		<LyricPlayer

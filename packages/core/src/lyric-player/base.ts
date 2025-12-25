@@ -593,15 +593,28 @@ export abstract class LyricPlayerBase
 		}
 		this.currentLyricLineObjects.forEach((lineObj, id, arr) => {
 			const line = lineObj.getLine();
+
 			if (!line.isBG && line.startTime <= time && line.endTime > time) {
+				if (isSeek) {
+					lineObj.enable(time);
+				}
+
 				if (!this.hotLines.has(id)) {
 					this.hotLines.add(id);
 					addedIds.add(id);
-					if (isSeek) lineObj.enable();
+
+					if (!isSeek) {
+						lineObj.enable();
+					}
+
 					if (arr[id + 1]?.getLine()?.isBG) {
 						this.hotLines.add(id + 1);
 						addedIds.add(id + 1);
-						if (isSeek) arr[id + 1].enable();
+						if (isSeek) {
+							arr[id + 1].enable(time);
+						} else {
+							arr[id + 1].enable();
+						}
 					}
 				}
 			}
@@ -969,7 +982,7 @@ export abstract class LyricLineBase extends EventTarget implements Disposable {
 		scale: new Spring(100),
 	};
 	abstract getLine(): LyricLine;
-	abstract enable(): void;
+	abstract enable(time?: number): void;
 	abstract disable(): void;
 	abstract resume(): void;
 	abstract pause(): void;
