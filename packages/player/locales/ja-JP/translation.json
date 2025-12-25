@@ -5,6 +5,8 @@
 			"pauseOrResume": "暂停 / 继续",
 			"forwardSong": "次の曲",
 			"toggleLyrics": "歌詞を表示",
+			"exitFullscreen": "全画面表示",
+			"enterFullscreen": "全画面表示を終了",
 			"editMusicOverrideMessage": "曲のカバレッジ情報を編集する",
 			"openRecorder": "打开捕获面板",
 			"exitLyricPage": "歌詞ページを出る",
@@ -22,7 +24,6 @@
 			"hires": "高解析度无损"
 		},
 		"openMenuViaRightClick": "歌詞ページの任意の場所を右クリックしてメニューを開きます。",
-		"buttonForDisplayOnly": "このボタンは表示のみを目的としており、現時点では実際の機能はありません。",
 		"ttmlImportDialog": {
 			"openButtonLabel": "从 AMLL TTML DB 搜索 / 导入歌词",
 			"title": "从 AMLL TTML DB 搜索 / 导入歌词",

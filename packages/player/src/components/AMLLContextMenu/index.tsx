@@ -8,7 +8,7 @@ import {
 } from "@applemusic-like-lyrics/react-full";
 import { ContextMenu } from "@radix-ui/themes";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import type { FC } from "react";
+import { type FC, useEffect, useState } from "react";
 import { Trans } from "react-i18next";
 import { router } from "../../router.tsx";
 import { recordPanelOpenedAtom } from "../../states/appAtoms.ts";
@@ -21,6 +21,28 @@ export const AMLLContextMenuContent: FC = () => {
 	const onRequestNextSong = useAtomValue(onRequestNextSongAtom).onEmit;
 	const onPlayOrResume = useAtomValue(onPlayOrResumeAtom).onEmit;
 	const musicId = useAtomValue(musicIdAtom);
+
+	const [isFullscreen, setIsFullscreen] = useState(
+		!!document.fullscreenElement,
+	);
+
+	useEffect(() => {
+		const handleFullScreenChange = () => {
+			setIsFullscreen(!!document.fullscreenElement);
+		};
+		document.addEventListener("fullscreenchange", handleFullScreenChange);
+		return () => {
+			document.removeEventListener("fullscreenchange", handleFullScreenChange);
+		};
+	}, []);
+
+	const toggleFullscreen = () => {
+		if (!document.fullscreenElement) {
+			document.documentElement.requestFullscreen();
+		} else {
+			document.exitFullscreen();
+		}
+	};
 
 	return (
 		<ContextMenu.Content>
@@ -40,6 +62,15 @@ export const AMLLContextMenuContent: FC = () => {
 			>
 				<Trans i18nKey="amll.contextMenu.toggleLyrics">显示歌词</Trans>
 			</ContextMenu.CheckboxItem>
+
+			<ContextMenu.Item onClick={toggleFullscreen} shortcut="F11">
+				{isFullscreen ? (
+					<Trans i18nKey="amll.contextMenu.exitFullscreen">退出全屏</Trans>
+				) : (
+					<Trans i18nKey="amll.contextMenu.enterFullscreen">进入全屏</Trans>
+				)}
+			</ContextMenu.Item>
+
 			<ContextMenu.Item
 				onClick={() => {
 					setLyricPageOpened(false);
