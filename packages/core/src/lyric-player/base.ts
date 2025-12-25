@@ -20,6 +20,7 @@ export abstract class LyricPlayerBase
 	implements HasElement, Disposable
 {
 	protected element: HTMLElement = document.createElement("div");
+	abstract get baseFontSize(): number;
 
 	protected currentTime = 0;
 	/** @internal */
@@ -741,20 +742,20 @@ export abstract class LyricPlayerBase
 	async calcLayout(sync = false, force = false) {
 		const interlude = this.getCurrentInterlude();
 		let curPos = -this.scrollOffset;
-		let targetAlignIndex = this.scrollToIndex;
-		let interludeDuration = 0;
+		const targetAlignIndex = this.scrollToIndex;
 		let isNextDuet = false;
 		if (interlude) {
-			interludeDuration = interlude[1] - interlude[0];
 			isNextDuet = interlude[3];
-			if (interludeDuration >= 4000) {
-				const nextLine = this.currentLyricLineObjects[interlude[2] + 1];
-				if (nextLine) {
-					targetAlignIndex = interlude[2] + 1;
-				}
-			}
 		} else {
 			this.interludeDots.setInterlude(undefined);
+		}
+
+		const fontSize = this.baseFontSize || 24;
+		const dotMargin = fontSize * 0.4;
+		const totalInterludeHeight = this.interludeDotsSize[1] + dotMargin * 2;
+
+		if (interlude) {
+			curPos -= totalInterludeHeight;
 		}
 		// 避免一开始就让所有歌词行挤在一起
 		const LINE_HEIGHT_FALLBACK = this.size[1] / 5;
@@ -802,9 +803,10 @@ export abstract class LyricPlayerBase
 			if (!setDots && shouldShowDots) {
 				setDots = true;
 
-				let targetX = 0;
+				curPos += dotMargin;
 
-				if (isNextDuet) {
+				let targetX = 0;
+				if (interlude && isNextDuet) {
 					targetX = this.size[0] - this.interludeDotsSize[0];
 				}
 
@@ -814,6 +816,7 @@ export abstract class LyricPlayerBase
 					this.interludeDots.setInterlude([interlude[0], interlude[1]]);
 				}
 				curPos += this.interludeDotsSize[1];
+				curPos += dotMargin;
 			}
 
 			let targetOpacity: number;
