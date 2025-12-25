@@ -5,6 +5,8 @@
 			"pauseOrResume": "暂停 / 继续",
 			"forwardSong": "下一首",
 			"toggleLyrics": "显示歌词",
+			"exitFullscreen": "退出全屏",
+			"enterFullscreen": "进入全屏",
 			"editMusicOverrideMessage": "编辑歌曲覆盖信息",
 			"openRecorder": "打开捕获面板",
 			"exitLyricPage": "退出歌词页面",
@@ -22,7 +24,6 @@
 			"hires": "高解析度无损"
 		},
 		"openMenuViaRightClick": "请右键歌词页任意位置来打开菜单哦！",
-		"buttonForDisplayOnly": "此按钮仅供展示用途，暂无实际功能",
 		"ttmlImportDialog": {
 			"openButtonLabel": "从 AMLL TTML DB 搜索 / 导入歌词",
 			"title": "从 AMLL TTML DB 搜索 / 导入歌词",

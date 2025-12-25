@@ -5,6 +5,8 @@
 			"pauseOrResume": "Pause / Resume",
 			"forwardSong": "Next Song",
 			"toggleLyrics": "Lyrics",
+			"exitFullscreen": "Enter Fullscreen",
+			"enterFullscreen": "Exit Fullscreen",
 			"editMusicOverrideMessage": "Edit Track Override Data",
 			"openRecorder": "打开捕获面板",
 			"exitLyricPage": "Exit Lyrics Page",
@@ -22,7 +24,6 @@
 			"hires": "Hi-Res Lossless"
 		},
 		"openMenuViaRightClick": "Please right-click anywhere to open menu",
-		"buttonForDisplayOnly": "This function is currently for display only, no actual feature included.",
 		"ttmlImportDialog": {
 			"openButtonLabel": "Search / Import lyrics from AMLL TTML DB",
 			"title": "Search / Import lyrics from AMLL TTML DB",

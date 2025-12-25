@@ -5,6 +5,8 @@
 			"pauseOrResume": "Tạm dừng / Tiếp tục",
 			"forwardSong": "Bài tiếp theo",
 			"toggleLyrics": "Hiển thị lời bài hát",
+			"exitFullscreen": "Toàn màn hình",
+			"enterFullscreen": "Thoát toàn màn hình",
 			"editMusicOverrideMessage": "Chỉnh sửa thông tin bài hát",
 			"openRecorder": "打开捕获面板",
 			"exitLyricPage": "Thoát lời bài hát",
@@ -22,7 +24,6 @@
 			"hires": "高解析度无损"
 		},
 		"openMenuViaRightClick": "Hãy nhấp chuột phải vào bất kỳ chỗ nào trên trang lời bài hát để mở Menu!",
-		"buttonForDisplayOnly": "Nút này chỉ dùng để hiển thị, hiện tại không có chức năng thực tế ",
 		"ttmlImportDialog": {
 			"openButtonLabel": "从 AMLL TTML DB 搜索 / 导入歌词",
 			"title": "从 AMLL TTML DB 搜索 / 导入歌词",
