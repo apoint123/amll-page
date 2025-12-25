@@ -610,9 +610,12 @@ export abstract class LyricPlayerBase
 			if (this.bufferedLines.size > 0) {
 				this.scrollToIndex = Math.min(...this.bufferedLines);
 			} else {
-				this.scrollToIndex = this.processedLines.findIndex(
+				const foundIndex = this.processedLines.findIndex(
 					(line) => line.startTime >= time,
 				);
+
+				this.scrollToIndex =
+					foundIndex === -1 ? this.processedLines.length : foundIndex;
 			}
 
 			this.resetScroll();
