@@ -324,7 +324,7 @@ export class LyricLineEl extends LyricLineBase {
 		if (!this.lyricPlayer.getEnableSpring() && this.isInSight) {
 			style += `transition-delay:${this.delay}ms;`;
 		}
-		style += `filter:blur(${Math.min(32, this.blur)}px);`;
+		style += `filter:blur(${Math.min(5, this.blur)}px);`;
 		if (style !== this.lastStyle) {
 			this.lastStyle = style;
 			this.element.setAttribute("style", style);
@@ -916,8 +916,8 @@ export class LyricLineEl extends LyricLineBase {
 			// this.lineWebAnimationTransforms.scale.stop();
 			this.lineTransforms.posY.setTargetPosition(top, delay);
 			this.lineTransforms.scale.setTargetPosition(scale);
-			if (this.blur !== Math.min(32, blur)) {
-				this.blur = Math.min(32, blur);
+			if (this.blur !== Math.min(5, blur)) {
+				this.blur = Math.min(5, blur);
 				const roundedBlur = blur.toFixed(3);
 				this.element.style.filter = `blur(${roundedBlur}px)`;
 			}
