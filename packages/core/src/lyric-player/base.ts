@@ -755,7 +755,9 @@ export abstract class LyricPlayerBase
 		const totalInterludeHeight = this.interludeDotsSize[1] + dotMargin * 2;
 
 		if (interlude) {
-			curPos -= totalInterludeHeight;
+			if (interlude[2] !== -1) {
+				curPos -= totalInterludeHeight;
+			}
 		}
 		// 避免一开始就让所有歌词行挤在一起
 		const LINE_HEIGHT_FALLBACK = this.size[1] / 5;
