@@ -510,24 +510,6 @@ export abstract class LyricPlayerBase
 		this.currentLyricLines = structuredClone(lines) as LyricLine[];
 		this.processedLines = structuredClone(lines) as LyricLine[];
 
-		this.processedLines.sort((a, b) => {
-			const startA = a.words.length > 0 ? a.words[0].startTime : a.startTime;
-			const startB = b.words.length > 0 ? b.words[0].startTime : b.startTime;
-
-			const diff = startA - startB;
-
-			// 避免浮点误差
-			if (Math.abs(diff) > 10) {
-				return diff;
-			}
-
-			if (a.isBG !== b.isBG) {
-				return a.isBG ? -1 : 1;
-			}
-
-			return 0;
-		});
-
 		this.isNonDynamic = true;
 		for (const line of this.processedLines) {
 			if (line.words.length > 1) {
@@ -622,18 +604,8 @@ export abstract class LyricPlayerBase
 		for (const lastHotId of this.hotLines) {
 			const line = this.processedLines[lastHotId];
 			if (line) {
-				if (line.isBG) {
-					if (line.endTime <= time) {
-						this.hotLines.delete(lastHotId);
-						removedHotIds.add(lastHotId);
-						if (isSeek) this.currentLyricLineObjects[lastHotId]?.disable();
-					}
-					continue;
-				}
-
-				const prevLine = this.processedLines[lastHotId - 1];
+				if (line.isBG) continue;
 				const nextLine = this.processedLines[lastHotId + 1];
-
 				if (nextLine?.isBG) {
 					const nextMainLine = this.processedLines[lastHotId + 2];
 					const startTime = Math.min(line.startTime, nextLine?.startTime);
@@ -650,27 +622,11 @@ export abstract class LyricPlayerBase
 							this.currentLyricLineObjects[lastHotId]?.disable();
 							this.currentLyricLineObjects[lastHotId + 1]?.disable();
 						}
-
-						if (prevLine?.isBG) {
-							this.hotLines.delete(lastHotId - 1);
-							removedHotIds.add(lastHotId - 1);
-							if (isSeek) {
-								this.currentLyricLineObjects[lastHotId - 1]?.disable();
-							}
-						}
 					}
 				} else if (line.startTime > time || line.endTime <= time) {
 					this.hotLines.delete(lastHotId);
 					removedHotIds.add(lastHotId);
 					if (isSeek) this.currentLyricLineObjects[lastHotId]?.disable();
-
-					if (prevLine?.isBG) {
-						this.hotLines.delete(lastHotId - 1);
-						removedHotIds.add(lastHotId - 1);
-						if (isSeek) {
-							this.currentLyricLineObjects[lastHotId - 1]?.disable();
-						}
-					}
 				}
 			} else {
 				this.hotLines.delete(lastHotId);
@@ -678,67 +634,34 @@ export abstract class LyricPlayerBase
 				if (isSeek) this.currentLyricLineObjects[lastHotId]?.disable();
 			}
 		}
-
 		this.currentLyricLineObjects.forEach((lineObj, id, arr) => {
 			const line = lineObj.getLine();
 
-			if (line.isBG) return;
-
-			const prevObj = arr[id - 1];
-			const prevLine = prevObj?.getLine();
-
-			let effectiveStartTime = line.startTime;
-			if (prevLine?.isBG) {
-				effectiveStartTime = Math.min(effectiveStartTime, prevLine.startTime);
-			}
-
-			if (effectiveStartTime <= time && line.endTime > time) {
-				if (line.startTime <= time) {
-					if (isSeek) {
-						lineObj.enable(time);
-					}
-
-					if (!this.hotLines.has(id)) {
-						this.hotLines.add(id);
-						addedIds.add(id);
-
-						if (!isSeek) {
-							lineObj.enable();
-						}
-					}
+			if (!line.isBG && line.startTime <= time && line.endTime > time) {
+				if (isSeek) {
+					lineObj.enable(time);
 				}
 
-				if (prevLine?.isBG) {
-					const prevId = id - 1;
-					if (prevLine.startTime <= time && prevLine.endTime > time) {
-						if (!this.hotLines.has(prevId)) {
-							this.hotLines.add(prevId);
-							addedIds.add(prevId);
-							if (isSeek) prevObj.enable(time);
-							else prevObj.enable();
-						} else if (isSeek) {
-							prevObj.enable(time);
-						}
-					}
-				}
+				if (!this.hotLines.has(id)) {
+					this.hotLines.add(id);
+					addedIds.add(id);
 
-				if (arr[id + 1]?.getLine()?.isBG) {
-					const nextId = id + 1;
-					const nextLine = arr[id + 1].getLine();
-					if (nextLine.startTime <= time && nextLine.endTime > time) {
-						if (!this.hotLines.has(nextId)) {
-							this.hotLines.add(nextId);
-							addedIds.add(nextId);
-							if (isSeek) arr[nextId].enable(time);
-							else arr[nextId].enable();
-						} else if (isSeek) {
-							arr[nextId].enable(time);
+					if (!isSeek) {
+						lineObj.enable();
+					}
+
+					if (arr[id + 1]?.getLine()?.isBG) {
+						this.hotLines.add(id + 1);
+						addedIds.add(id + 1);
+						if (isSeek) {
+							arr[id + 1].enable(time);
+						} else {
+							arr[id + 1].enable();
 						}
 					}
 				}
 			}
 		});
-
 		for (const v of this.bufferedLines) {
 			if (!this.hotLines.has(v)) {
 				removedIds.add(v);
@@ -832,9 +755,7 @@ export abstract class LyricPlayerBase
 		const totalInterludeHeight = this.interludeDotsSize[1] + dotMargin * 2;
 
 		if (interlude) {
-			if (interlude[2] !== -1) {
-				curPos -= totalInterludeHeight;
-			}
+			curPos -= totalInterludeHeight;
 		}
 		// 避免一开始就让所有歌词行挤在一起
 		const LINE_HEIGHT_FALLBACK = this.size[1] / 5;
