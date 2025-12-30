@@ -63,6 +63,8 @@ export const musicContextModeAtom = atomWithStorage(
 export const lyricDBVersionAtom = atomWithStorage<string | null>(
 	"amll-player.lyricDBVersion",
 	null,
+	undefined,
+	{ getOnInit: true },
 );
 
 /**
@@ -157,6 +159,8 @@ export const hideNowPlayingBarAtom = atom(false);
 export const currentMusicQueueAtom = atomWithStorage<string[]>(
 	"amll-player.queue",
 	[],
+	undefined,
+	{ getOnInit: true },
 );
 
 /**

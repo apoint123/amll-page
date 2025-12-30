@@ -51,7 +51,6 @@ import {
 	advanceLyricDynamicLyricTimeAtom,
 	currentMusicIndexAtom,
 	currentMusicQueueAtom,
-	lyricDBVersionAtom,
 	onRequestPlaySongByIndexAtom,
 } from "../../states/appAtoms.ts";
 import {
@@ -188,15 +187,6 @@ const LyricContext: FC = () => {
 		[musicId],
 	);
 	const store = useStore();
-
-	// 用来避免异步加载导致获取到默认值的 useEffect
-	useEffect(() => {
-		const unsub = store.sub(lyricDBVersionAtom, () => {
-			console.log("歌词版本号", store.get(lyricDBVersionAtom));
-		});
-
-		return unsub;
-	}, []);
 
 	useEffect(() => {
 		syncLyricsDatabase(store).then((result) => {

@@ -105,6 +105,8 @@ export const musicPlayingPositionAtom = atomWithStorage<number>(
 export const musicVolumeAtom = atomWithStorage(
 	"amll-react-full.musicVolumeAtom",
 	0.5,
+	undefined,
+	{ getOnInit: true },
 );
 
 /**
