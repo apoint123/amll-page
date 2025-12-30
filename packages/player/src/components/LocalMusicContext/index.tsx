@@ -46,6 +46,7 @@ import { type FC, useEffect, useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { db } from "../../dexie.ts";
+import { useMediaSession } from "../../hooks/useMediaSession.ts";
 import {
 	advanceLyricDynamicLyricTimeAtom,
 	currentMusicIndexAtom,
@@ -182,14 +183,20 @@ const LyricContext: FC = () => {
 	);
 	const setLyricLines = useSetAtom(musicLyricLinesAtom);
 	const setHideLyricView = useSetAtom(hideLyricViewAtom);
-	const lastCommit = useAtomValue(lyricDBVersionAtom);
 	const song = useLiveQuery(
 		() => (musicId ? db.songs.get(musicId) : undefined),
 		[musicId],
 	);
 	const store = useStore();
 
-	console.debug(LYRIC_LOG_TAG, `歌词版本号:`, lastCommit);
+	// 用来避免异步加载导致获取到默认值的 useEffect
+	useEffect(() => {
+		const unsub = store.sub(lyricDBVersionAtom, () => {
+			console.log("歌词版本号", store.get(lyricDBVersionAtom));
+		});
+
+		return unsub;
+	}, []);
 
 	useEffect(() => {
 		syncLyricsDatabase(store).then((result) => {
@@ -343,6 +350,8 @@ export const LocalMusicContext: FC = () => {
 	const savedVolume = useAtomValue(musicVolumeAtom);
 	const [hasRestored, setHasRestored] = useState(false);
 
+	useMediaSession();
+
 	useEffect(() => {
 		webPlayer.setVolume(savedVolume);
 	}, [savedVolume]);
@@ -364,6 +373,12 @@ export const LocalMusicContext: FC = () => {
 							musicArtistsAtom,
 							song.songArtists.split(",").map((v) => ({ name: v, id: v })),
 						);
+
+						const oldCover = store.get(musicCoverAtom);
+						if (oldCover?.startsWith("blob:")) {
+							URL.revokeObjectURL(oldCover);
+						}
+
 						store.set(musicCoverAtom, URL.createObjectURL(song.cover));
 						store.set(musicDurationAtom, (song.duration || 0) * 1000);
 
@@ -432,6 +447,12 @@ export const LocalMusicContext: FC = () => {
 				musicArtistsAtom,
 				song.songArtists.split(",").map((v) => ({ name: v, id: v })),
 			);
+
+			const currentCover = store.get(musicCoverAtom);
+			if (currentCover?.startsWith("blob:")) {
+				URL.revokeObjectURL(currentCover);
+			}
+
 			store.set(musicCoverAtom, URL.createObjectURL(song.cover));
 			store.set(musicIdAtom, song.id);
 			store.set(currentMusicIndexAtom, targetIndex);

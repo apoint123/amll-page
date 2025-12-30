@@ -7,6 +7,7 @@ export interface WebPlayerEventMap {
 	loaded: undefined;
 	timeupdate: number;
 	volumechange: number;
+	seeked: number;
 	error: Error;
 }
 
@@ -44,6 +45,10 @@ export class WebPlayer extends TypedEventTarget<WebPlayerEventMap> {
 
 		this.audioElement.addEventListener("timeupdate", () => {
 			this.emit("timeupdate", this.currentTime);
+		});
+
+		this.audioElement.addEventListener("seeked", () => {
+			this.emit("seeked", this.currentTime);
 		});
 
 		this.audioElement.addEventListener("error", (e) => {
