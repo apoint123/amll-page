@@ -93,7 +93,7 @@
 			},
 			"menu": {
 				"auditMode": "歌词审核模式",
-				"wsMode": "进入 WS Protocol 模式",
+				"wsMode": "WS Protocol 模式",
 				"settings": "设置"
 			},
 			"noPlaylistTip": "没有播放列表，快去新建一个吧！",

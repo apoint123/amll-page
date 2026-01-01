@@ -93,7 +93,7 @@
 			},
 			"menu": {
 				"auditMode": "Lyric Audit Mode",
-				"wsMode": "进入 WS Protocol 模式",
+				"wsMode": "WS Protocol Mode",
 				"settings": "Settings"
 			},
 			"noPlaylistTip": "Nothing is here, try to create something?",
