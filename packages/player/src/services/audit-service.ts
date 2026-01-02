@@ -3,6 +3,8 @@ import { extractMusicMetadata } from "../utils/music-file";
 import { parseTTML } from "../utils/parseTTML";
 
 const MUSIC_API_BASE = "https://api.kxzjoker.cn/api/163_music";
+const MAX_AUDIT_CACHE_SIZE = 20;
+
 export type ReviewEvent = "APPROVE" | "REQUEST_CHANGES" | "COMMENT";
 
 interface NeteaseApiResponse {
@@ -111,6 +113,7 @@ export class AuditService {
 			.first();
 		if (existingMeta && existingMeta.prHeadSha === pr.head.sha) {
 			await this.addToAuditPlaylist(existingMeta.songId);
+			await this.touchSong(existingMeta.songId);
 			return existingMeta.songId;
 		}
 
@@ -135,7 +138,53 @@ export class AuditService {
 		);
 	}
 
+	private async enforceCacheLimit() {
+		const allKeys = await db.songs.orderBy("accessTime").primaryKeys();
+
+		const auditKeys = allKeys.filter(
+			(k) => typeof k === "string" && k.startsWith("audit-"),
+		);
+
+		const excessCount = auditKeys.length - MAX_AUDIT_CACHE_SIZE;
+
+		if (excessCount > 0) {
+			const keysToDelete = auditKeys.slice(0, excessCount + 1);
+
+			console.log(`清理 ${keysToDelete.length} 首歌曲`);
+
+			await db.transaction(
+				"rw",
+				db.songs,
+				db.auditMetadata,
+				db.playlists,
+				async () => {
+					await db.songs.bulkDelete(keysToDelete);
+					await db.auditMetadata.where("songId").anyOf(keysToDelete).delete();
+					const playlist = await db.playlists.get(AUDIT_PLAYLIST_ID);
+					if (playlist) {
+						playlist.songIds = playlist.songIds.filter(
+							(id) => !keysToDelete.includes(id),
+						);
+						await db.playlists.put(playlist);
+					}
+				},
+			);
+		}
+	}
+
+	async touchSong(songId: string) {
+		try {
+			await db.songs.update(songId, {
+				accessTime: Date.now(),
+			});
+		} catch (e) {
+			console.warn("更新歌曲访问时间失败", e);
+		}
+	}
+
 	async fetchAndBindAudio(songId: string, platformId: string) {
+		await this.enforceCacheLimit();
+
 		const apiRes = await fetch(
 			`${MUSIC_API_BASE}?ids=${platformId}&level=lossless&type=json`,
 		);
@@ -156,6 +205,7 @@ export class AuditService {
 			songAlbum: apiData.al_name,
 			cover: coverBlob,
 			file: audioBlob,
+			accessTime: Date.now(),
 		});
 
 		await db.auditMetadata.update(songId, {
@@ -205,10 +255,14 @@ export class AuditService {
 		filename: string,
 		candidateIds: string[],
 	): Promise<string> {
+		await this.enforceCacheLimit();
+
 		const primaryId =
 			candidateIds.length > 0 ? candidateIds[0] : `manual-pr-${pr.number}`;
 
 		const songId = `audit-netease-${primaryId}`;
+
+		const now = Date.now();
 
 		const song: Song = {
 			id: songId,
@@ -223,6 +277,8 @@ export class AuditService {
 			lyric: ttmlContent,
 			translatedLrc: "",
 			romanLrc: "",
+			addTime: now,
+			accessTime: now,
 		};
 
 		await db.auditMetadata.where({ prId: pr.number }).delete();
@@ -308,6 +364,7 @@ export class AuditService {
 			songAlbum: extracted.album,
 			cover: extracted.cover,
 			duration: extracted.duration,
+			accessTime: Date.now(),
 		});
 
 		await db.auditMetadata.update(songId, {

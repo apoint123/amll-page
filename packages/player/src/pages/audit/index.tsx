@@ -135,6 +135,7 @@ export const Component = () => {
 
 	const handlePlayLocal = () => {
 		if (!currentMeta) return;
+		service.touchSong(currentMeta.songId);
 		setCurrentQueue([currentMeta.songId]);
 		requestPlaySong.onEmit(0);
 	};
@@ -216,6 +217,8 @@ export const Component = () => {
 			if (!currentMeta) return;
 
 			if (currentMeta.platformId === platformId) {
+				void service.touchSong(currentMeta.songId);
+
 				setCurrentQueue([currentMeta.songId]);
 				requestPlaySong.onEmit(0);
 				toast.info("播放已缓存音频");

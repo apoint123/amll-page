@@ -26,6 +26,8 @@ export interface Song {
 	lyric: string;
 	translatedLrc?: string;
 	romanLrc?: string;
+	addTime?: number;
+	accessTime?: number;
 }
 
 export interface TTMLDBLyricEntry {
@@ -61,4 +63,8 @@ db.version(1).stores({
 	songs: "&id,filePath,songName,songArtists",
 	ttmlDB: "&name",
 	auditMetadata: "&songId, prId, status",
+});
+
+db.version(2).stores({
+	songs: "&id,filePath,songName,songArtists,accessTime",
 });
