@@ -9,9 +9,10 @@ import {
 	musicQualityAtom,
 } from "@applemusic-like-lyrics/react-full";
 import { useSetAtom, useStore } from "jotai";
+import type { IAudioMetadata } from "music-metadata";
 import { type FC, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
-import { db } from "../../dexie.ts";
+import { db, type Song } from "../../dexie.ts";
 import {
 	currentMusicIndexAtom,
 	currentMusicQueueAtom,
@@ -126,43 +127,50 @@ export const URLParamsHandler: FC = () => {
 				}
 
 				// 提取音乐元数据
-				let extractedMetadata;
+				let songName = params.title || "Unknown Title";
+				let songArtists = params.artist || "Unknown Artist";
+				let songAlbum = "Unknown Album";
+				let finalCover = coverBlob;
+				let finalDuration = 0;
+				let extractedLyric = "";
+				let audioMetadata: IAudioMetadata | undefined;
+
 				try {
-					extractedMetadata = await extractMusicMetadata(musicBlob);
+					const extractedMetadata = await extractMusicMetadata(musicBlob);
+
+					if (!params.title && extractedMetadata.title) {
+						songName = extractedMetadata.title;
+					}
+					if (!params.artist && extractedMetadata.artist) {
+						songArtists = extractedMetadata.artist;
+					}
+					if (extractedMetadata.album) {
+						songAlbum = extractedMetadata.album;
+					}
+					if (finalCover.size === 0 && extractedMetadata.cover.size > 0) {
+						finalCover = extractedMetadata.cover;
+					}
+					if (extractedMetadata.duration) {
+						finalDuration = extractedMetadata.duration;
+					}
+					extractedLyric = extractedMetadata.lyric;
+					audioMetadata = extractedMetadata.metadata;
 				} catch (e) {
 					console.warn("提取音乐元数据失败", e);
-					extractedMetadata = {
-						title: "",
-						artist: "Unknown Artist",
-						album: "Unknown Album",
-						cover: coverBlob,
-						lyric: "",
-						duration: 0,
-						metadata: {} as any,
-					};
 				}
-
-				// 使用URL参数中的信息覆盖元数据
-				const songName =
-					params.title || extractedMetadata.title || "Unknown Title";
-				const songArtists =
-					params.artist || extractedMetadata.artist || "Unknown Artist";
-				const songAlbum = extractedMetadata.album || "Unknown Album";
-				const finalCover =
-					coverBlob.size > 0 ? coverBlob : extractedMetadata.cover;
-				const finalDuration = extractedMetadata.duration || 0;
 
 				// 如果URL参数中有歌词，使用URL参数中的歌词
 				if (params.lyric && lyricContent) {
 					// 使用从URL加载的歌词
-				} else if (extractedMetadata.lyric) {
+				} else if (extractedLyric) {
 					// 使用从音乐文件提取的歌词
-					lyricContent = extractedMetadata.lyric;
+					lyricContent = extractedLyric;
 					lyricFormat = "lrc";
 				}
 
 				// 创建或更新歌曲
-				const song = {
+				const now = Date.now();
+				const song: Song = {
 					id: songId,
 					filePath: params.music,
 					songName,
@@ -175,17 +183,28 @@ export const URLParamsHandler: FC = () => {
 					lyric: lyricContent,
 					translatedLrc: "",
 					romanLrc: "",
+					addTime: now,
+					accessTime: now,
 				};
 
 				await db.songs.put(song);
 
 				// 设置播放器状态
-				try {
-					const { metadata } = await extractMusicMetadata(musicBlob);
-					const qualityState = mapMetadataToQuality(metadata);
-					store.set(musicQualityAtom, qualityState);
-				} catch (e) {
-					console.warn("解析音频质量失败", e);
+				if (audioMetadata) {
+					try {
+						const qualityState = mapMetadataToQuality(audioMetadata);
+						store.set(musicQualityAtom, qualityState);
+					} catch (e) {
+						console.warn("解析音频质量失败", e);
+						store.set(musicQualityAtom, {
+							type: AudioQualityType.None,
+							codec: "Unknown",
+							channels: 2,
+							sampleRate: 44100,
+							sampleFormat: "16-bit",
+						});
+					}
+				} else {
 					store.set(musicQualityAtom, {
 						type: AudioQualityType.None,
 						codec: "Unknown",
@@ -194,7 +213,6 @@ export const URLParamsHandler: FC = () => {
 						sampleFormat: "16-bit",
 					});
 				}
-
 				store.set(musicNameAtom, songName);
 				store.set(
 					musicArtistsAtom,

@@ -140,6 +140,7 @@ export const Component: FC = () => {
 						const pathMd5 = md5(file.name + file.size);
 
 						success += 1;
+						const now = Date.now();
 						return {
 							id: pathMd5,
 							filePath: file.name,
@@ -151,6 +152,8 @@ export const Component: FC = () => {
 							cover: extracted.cover,
 							file: file,
 							duration: extracted.duration,
+							addTime: now,
+							accessTime: now,
 						};
 					} catch (err) {
 						errored += 1;

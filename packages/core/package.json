@@ -44,7 +44,7 @@
 		}
 	},
 	"devDependencies": {
-		"@applemusic-like-lyrics/lyric": "^0.2.4",
+		"@applemusic-like-lyrics/lyric": "^0.3.0",
 		"@biomejs/biome": "catalog:",
 		"@types/deep-freeze": "^0.1.5",
 		"@types/stats.js": "^0.17.3",
