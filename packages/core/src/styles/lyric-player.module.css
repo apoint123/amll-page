@@ -108,7 +108,7 @@
 	.romanWord {
 		font-size: 0.5em;
 		line-height: 1em;
-        display: flex;
+		display: flex;
 	}
 
 	& > span,
