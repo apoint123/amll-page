@@ -45,6 +45,7 @@ import {
 	originalQueueAtom,
 } from "../../states/appAtoms.ts";
 import { audioPlayer } from "../../utils/ffmpeg-engine/FFmpegAudioPlayer";
+import { compressCoverImage } from "../../utils/image.ts";
 import {
 	SyncStatus,
 	syncLyricsDatabase,
@@ -199,7 +200,9 @@ export const LocalMusicContext: FC = () => {
 							URL.revokeObjectURL(oldCover);
 						}
 
-						store.set(musicCoverAtom, URL.createObjectURL(song.cover));
+						const compressedCover = await compressCoverImage(song.cover);
+						store.set(musicCoverAtom, URL.createObjectURL(compressedCover));
+
 						store.set(musicDurationAtom, (song.duration || 0) * 1000);
 
 						await audioPlayer.load(file);
@@ -273,7 +276,9 @@ export const LocalMusicContext: FC = () => {
 				URL.revokeObjectURL(currentCover);
 			}
 
-			store.set(musicCoverAtom, URL.createObjectURL(song.cover));
+			const compressedCover = await compressCoverImage(song.cover);
+			store.set(musicCoverAtom, URL.createObjectURL(compressedCover));
+
 			store.set(musicIdAtom, song.id);
 			store.set(currentMusicIndexAtom, targetIndex);
 
