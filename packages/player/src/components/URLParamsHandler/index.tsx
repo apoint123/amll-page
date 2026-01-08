@@ -17,6 +17,7 @@ import {
 	currentMusicIndexAtom,
 	currentMusicQueueAtom,
 } from "../../states/appAtoms.ts";
+import { audioPlayer } from "../../utils/ffmpeg-engine/FFmpegAudioPlayer";
 import { extractMusicMetadata } from "../../utils/music-file.ts";
 import { mapMetadataToQuality } from "../../utils/quality.ts";
 import {
@@ -24,7 +25,6 @@ import {
 	loadFileFromURL,
 	parseURLParams,
 } from "../../utils/url-params.ts";
-import { webPlayer } from "../../utils/web-player.ts";
 
 /**
  * 根据URL或内容检测歌词格式
@@ -233,8 +233,8 @@ export const URLParamsHandler: FC = () => {
 						type: musicBlob.type || "audio/mpeg",
 					},
 				);
-				await webPlayer.load(file);
-				await webPlayer.play();
+				await audioPlayer.load(file);
+				await audioPlayer.play();
 				store.set(musicPlayingAtom, true);
 
 				// 打开歌词页面

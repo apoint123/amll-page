@@ -44,13 +44,13 @@ import {
 	onRequestPlaySongByIndexAtom,
 	originalQueueAtom,
 } from "../../states/appAtoms.ts";
+import { audioPlayer } from "../../utils/ffmpeg-engine/FFmpegAudioPlayer";
 import {
 	SyncStatus,
 	syncLyricsDatabase,
 } from "../../utils/lyric-sync-manager.ts";
 import { extractMusicMetadata } from "../../utils/music-file.ts";
 import { mapMetadataToQuality } from "../../utils/quality.ts";
-import { webPlayer } from "../../utils/web-player.ts";
 
 function shuffleArray<T>(array: T[]): T[] {
 	const arr = [...array];
@@ -65,7 +65,7 @@ export const FFTToLowPassContext: FC = () => {
 	const fftDataRange = useAtomValue(fftDataRangeAtom);
 
 	useEffect(() => {
-		// This is a placeholder, as FFT is not implemented in WebPlayer yet.
+		// This is a placeholder, as FFT is not implemented in audioPlayer yet.
 	}, [fftDataRange]);
 
 	return null;
@@ -173,7 +173,7 @@ export const LocalMusicContext: FC = () => {
 	useMediaSession();
 
 	useEffect(() => {
-		webPlayer.setVolume(savedVolume);
+		audioPlayer.setVolume(savedVolume);
 	}, [savedVolume]);
 
 	useEffect(() => {
@@ -202,10 +202,10 @@ export const LocalMusicContext: FC = () => {
 						store.set(musicCoverAtom, URL.createObjectURL(song.cover));
 						store.set(musicDurationAtom, (song.duration || 0) * 1000);
 
-						await webPlayer.load(file);
+						await audioPlayer.load(file);
 
 						if (savedPosition > 0) {
-							webPlayer.seek(savedPosition / 1000);
+							audioPlayer.seek(savedPosition / 1000);
 						}
 
 						store.set(musicPlayingAtom, false);
@@ -280,8 +280,8 @@ export const LocalMusicContext: FC = () => {
 			const file = new File([song.file], song.filePath, {
 				type: song.file.type,
 			});
-			await webPlayer.load(file);
-			await webPlayer.play();
+			await audioPlayer.load(file);
+			await audioPlayer.play();
 			store.set(musicPlayingAtom, true);
 		};
 
@@ -289,9 +289,9 @@ export const LocalMusicContext: FC = () => {
 			onPlayOrResumeAtom,
 			toEmit(() => {
 				if (musicPlaying) {
-					webPlayer.pause();
+					audioPlayer.pause();
 				} else {
-					webPlayer.play();
+					audioPlayer.play();
 				}
 			}),
 		);
@@ -305,19 +305,19 @@ export const LocalMusicContext: FC = () => {
 		store.set(
 			onSeekPositionAtom,
 			toEmit((time: number) => {
-				webPlayer.seek(time / 1000);
+				audioPlayer.seek(time / 1000);
 			}),
 		);
 		store.set(
 			onLyricLineClickAtom,
 			toEmit((evt) => {
-				webPlayer.seek(evt.line.getLine().startTime / 1000);
+				audioPlayer.seek(evt.line.getLine().startTime / 1000);
 			}),
 		);
 		store.set(
 			onChangeVolumeAtom,
 			toEmit((volume: number) => {
-				webPlayer.setVolume(volume);
+				audioPlayer.setVolume(volume);
 			}),
 		);
 		store.set(
@@ -336,7 +336,7 @@ export const LocalMusicContext: FC = () => {
 		);
 
 		const handleLoaded = async () => {
-			const durationSec = webPlayer.duration;
+			const durationSec = audioPlayer.duration;
 			const durationMs = (durationSec * 1000) | 0;
 
 			if (Number.isFinite(durationSec)) {
@@ -355,12 +355,10 @@ export const LocalMusicContext: FC = () => {
 
 		const handlePlay = () => {
 			setMusicPlaying(true);
-			startRafLoop();
 		};
 
 		const handlePause = () => {
 			setMusicPlaying(false);
-			stopRafLoop();
 		};
 
 		const playNextManual = () => {
@@ -388,7 +386,7 @@ export const LocalMusicContext: FC = () => {
 				} else {
 					setMusicPlaying(false);
 					store.set(musicPlayingAtom, false);
-					webPlayer.seek(0);
+					audioPlayer.seek(0);
 					store.set(musicPlayingPositionAtom, 0);
 				}
 			}
@@ -460,40 +458,24 @@ export const LocalMusicContext: FC = () => {
 			store.set(musicVolumeAtom, e.detail);
 		};
 
-		let rafId: number;
-
-		const updatePositionLoop = () => {
-			const currentTime = webPlayer.currentTime;
-			store.set(musicPlayingPositionAtom, (currentTime * 1000) | 0);
-			rafId = requestAnimationFrame(updatePositionLoop);
+		const handleTimeUpdate = (e: CustomEvent<number>) => {
+			store.set(musicPlayingPositionAtom, (e.detail * 1000) | 0);
 		};
 
-		const startRafLoop = () => {
-			cancelAnimationFrame(rafId);
-			updatePositionLoop();
-		};
-
-		const stopRafLoop = () => {
-			cancelAnimationFrame(rafId);
-		};
-
-		webPlayer.addEventListener("play", handlePlay);
-		webPlayer.addEventListener("pause", handlePause);
-		webPlayer.addEventListener("ended", handleEnded);
-		webPlayer.addEventListener("volumechange", handleVolumeChange);
-		webPlayer.addEventListener("loaded", handleLoaded);
-
-		if (!webPlayer.getInternalSourceNode().mediaElement.paused) {
-			startRafLoop();
-		}
+		audioPlayer.addEventListener("play", handlePlay);
+		audioPlayer.addEventListener("pause", handlePause);
+		audioPlayer.addEventListener("ended", handleEnded);
+		audioPlayer.addEventListener("volumechange", handleVolumeChange);
+		audioPlayer.addEventListener("loaded", handleLoaded);
+		audioPlayer.addEventListener("timeupdate", handleTimeUpdate);
 
 		return () => {
-			stopRafLoop();
-			webPlayer.removeEventListener("play", handlePlay);
-			webPlayer.removeEventListener("pause", handlePause);
-			webPlayer.removeEventListener("ended", handleEnded);
-			webPlayer.removeEventListener("volumechange", handleVolumeChange);
-			webPlayer.removeEventListener("loaded", handleLoaded);
+			audioPlayer.removeEventListener("play", handlePlay);
+			audioPlayer.removeEventListener("pause", handlePause);
+			audioPlayer.removeEventListener("ended", handleEnded);
+			audioPlayer.removeEventListener("volumechange", handleVolumeChange);
+			audioPlayer.removeEventListener("loaded", handleLoaded);
+			audioPlayer.removeEventListener("timeupdate", handleTimeUpdate);
 
 			const doNothing = toEmit(() => {});
 			store.set(onRequestNextSongAtom, doNothing);

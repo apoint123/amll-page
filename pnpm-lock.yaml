@@ -362,6 +362,9 @@ importers:
       '@types/convert-source-map':
         specifier: ^2.0.3
         version: 2.0.3
+      '@types/emscripten':
+        specifier: ^1.41.5
+        version: 1.41.5
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.7
@@ -3471,6 +3474,9 @@ packages:
 
   '@types/earcut@2.1.4':
     resolution: {integrity: sha512-qp3m9PPz4gULB9MhjGID7wpo3gJ4bTGXm7ltNDsmOvsPduTeHp8wSW9YckBj3mljeOh4F0m2z/0JKAALRKbmLQ==}
+
+  '@types/emscripten@1.41.5':
+    resolution: {integrity: sha512-cMQm7pxu6BxtHyqJ7mQZ2kXWV5SLmugybFdHCBbJ5eHzOo6VhBckEgAT3//rP5FwPHNPeEiq4SmQ5ucBwsOo4Q==}
 
   '@types/estree-jsx@1.0.5':
     resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
@@ -11326,6 +11332,8 @@ snapshots:
   '@types/deep-freeze@0.1.5': {}
 
   '@types/earcut@2.1.4': {}
+
+  '@types/emscripten@1.41.5': {}
 
   '@types/estree-jsx@1.0.5':
     dependencies:

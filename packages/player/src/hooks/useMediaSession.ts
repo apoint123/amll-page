@@ -10,7 +10,7 @@ import {
 } from "@applemusic-like-lyrics/react-full";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect } from "react";
-import { webPlayer } from "../utils/web-player";
+import { audioPlayer } from "../utils/ffmpeg-engine/FFmpegAudioPlayer";
 
 export const useMediaSession = () => {
 	const musicName = useAtomValue(musicNameAtom);
@@ -52,8 +52,8 @@ export const useMediaSession = () => {
 	const updatePosition = useCallback(() => {
 		if (!("mediaSession" in navigator)) return;
 
-		const duration = webPlayer.duration;
-		const position = webPlayer.currentTime;
+		const duration = audioPlayer.duration;
+		const position = audioPlayer.currentTime;
 
 		if (duration > 0 && Number.isFinite(duration)) {
 			try {
@@ -71,18 +71,18 @@ export const useMediaSession = () => {
 	useEffect(() => {
 		if (!("mediaSession" in navigator)) return;
 
-		webPlayer.addEventListener("play", updatePosition);
-		webPlayer.addEventListener("pause", updatePosition);
-		webPlayer.addEventListener("loaded", updatePosition);
-		webPlayer.addEventListener("seeked", updatePosition);
+		audioPlayer.addEventListener("play", updatePosition);
+		audioPlayer.addEventListener("pause", updatePosition);
+		audioPlayer.addEventListener("loaded", updatePosition);
+		audioPlayer.addEventListener("seeked", updatePosition);
 
 		updatePosition();
 
 		return () => {
-			webPlayer.removeEventListener("play", updatePosition);
-			webPlayer.removeEventListener("pause", updatePosition);
-			webPlayer.removeEventListener("loaded", updatePosition);
-			webPlayer.removeEventListener("seeked", updatePosition);
+			audioPlayer.removeEventListener("play", updatePosition);
+			audioPlayer.removeEventListener("pause", updatePosition);
+			audioPlayer.removeEventListener("loaded", updatePosition);
+			audioPlayer.removeEventListener("seeked", updatePosition);
 		};
 	}, [updatePosition]);
 

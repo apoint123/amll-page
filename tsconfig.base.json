@@ -16,7 +16,7 @@
 		"incremental": true,
 
 		"target": "ESNext",
-		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+		"lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
 		"jsx": "react-jsx",
 
 		"esModuleInterop": true,

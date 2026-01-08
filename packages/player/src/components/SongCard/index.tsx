@@ -4,8 +4,8 @@ import { type CSSProperties, forwardRef, type PropsWithChildren } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import type { Song } from "../../dexie.ts";
 import { router } from "../../router.tsx";
+import { audioPlayer } from "../../utils/ffmpeg-engine/FFmpegAudioPlayer.ts";
 import { useSongCover } from "../../utils/use-song-cover.ts";
-import { webPlayer } from "../../utils/web-player.ts";
 
 export const SongCard = forwardRef<
 	HTMLDivElement,
@@ -59,8 +59,8 @@ export const SongCard = forwardRef<
 								const file = new File([song.file], song.filePath, {
 									type: song.file.type,
 								});
-								await webPlayer.load(file);
-								webPlayer.play();
+								await audioPlayer.load(file);
+								audioPlayer.play();
 							}
 						}}
 					>
