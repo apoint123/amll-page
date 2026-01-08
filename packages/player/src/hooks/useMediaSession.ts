@@ -32,15 +32,15 @@ export const useMediaSession = () => {
 		navigator.mediaSession.metadata = new MediaMetadata({
 			title: musicName,
 			artist: artistNames,
-			artwork: musicCover
-				? [
-						{
-							src: musicCover,
-							sizes: "512x512",
-							type: "image/png",
-						},
-					]
-				: [],
+			// artwork: musicCover
+			// 	? [
+			// 			{
+			// 				src: musicCover,
+			// 				sizes: "128x128",
+			// 				type: "image/png",
+			// 			},
+			// 		]
+			// 	: [],
 		});
 	}, [musicName, musicArtists, musicCover]);
 
