@@ -103,6 +103,7 @@
 
 	& span {
 		display: inline-block;
+		text-align: start;
 	}
 
 	.romanWord {
