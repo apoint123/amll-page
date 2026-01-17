@@ -190,7 +190,8 @@ export class AuditService {
 
 		const existingSong = await db.songs.get(newSongId);
 
-		if (existingSong) {
+		if (existingSong?.file && existingSong.file.size > 0) {
+			console.log(`命中缓存: ${newSongId}`);
 			await this.touchSong(newSongId);
 		} else {
 			const sourceResult = await fetchAudioSource(platformId, source);
