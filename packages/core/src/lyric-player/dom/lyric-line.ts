@@ -470,10 +470,7 @@ export class LyricLineEl extends LyricLineBase {
 			main.appendChild(document.createTextNode(" "));
 		}
 		main.appendChild(wrapperWordEl);
-		if (
-			merged.word.trimEnd() !== merged.word &&
-			LyricLineBase.shouldEmphasize(merged)
-		) {
+		if (merged.word.trimEnd() !== merged.word) {
 			main.appendChild(document.createTextNode(" "));
 		}
 	}
