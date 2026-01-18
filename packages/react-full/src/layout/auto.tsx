@@ -1,12 +1,6 @@
 import type React from "react";
 import type { HTMLProps } from "react";
-import {
-	forwardRef,
-	useImperativeHandle,
-	useLayoutEffect,
-	useRef,
-	useState,
-} from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import styles from "./auto.module.css";
 import { HorizontalLayout } from "./horizontal";
 import { VerticalLayout } from "./vertical";
@@ -27,76 +21,82 @@ export const AutoLyricLayout: React.FC<
 		hideLyric?: boolean;
 		verticalImmerseCover?: boolean;
 		onLayoutChange?: (isVertical: boolean) => void;
+		onElementMounted?: (node: HTMLDivElement | null) => void;
 	} & HTMLProps<HTMLDivElement>
-> = forwardRef(
-	(
-		{
-			thumbSlot,
-			controlsSlot,
-			horizontalBottomControls,
-			smallControlsSlot,
-			bigControlsSlot,
-			coverSlot,
-			lyricSlot,
-			backgroundSlot,
-			hideLyric,
-			verticalImmerseCover,
-			onLayoutChange,
-			...rest
+> = ({
+	thumbSlot,
+	controlsSlot,
+	horizontalBottomControls,
+	smallControlsSlot,
+	bigControlsSlot,
+	coverSlot,
+	lyricSlot,
+	backgroundSlot,
+	hideLyric,
+	verticalImmerseCover,
+	onLayoutChange,
+	onElementMounted,
+	...rest
+}) => {
+	const [isVertical, setIsVertical] = useState(false);
+	const rootRef = useRef<HTMLDivElement>(null);
+
+	const setRefs = useCallback(
+		(node: HTMLDivElement | null) => {
+			rootRef.current = node;
+
+			if (onElementMounted) {
+				onElementMounted(node);
+			}
 		},
-		ref,
-	) => {
-		const [isVertical, setIsVertical] = useState(false);
-		const rootRef = useRef<HTMLDivElement>(null);
+		[onElementMounted],
+	);
 
-		useImperativeHandle(ref, () => rootRef.current!);
+	useLayoutEffect(() => {
+		const rootEl = rootRef.current;
+		if (!rootEl) return;
 
-		useLayoutEffect(() => {
-			const rootEl = rootRef.current;
-			if (!rootEl) return;
-			setIsVertical(rootEl.clientWidth < rootEl.clientHeight);
-			const obz = new ResizeObserver(() => {
-				const rootB = rootEl.getBoundingClientRect();
-				setIsVertical(rootB.width < rootB.height);
-			});
-			obz.observe(rootEl);
-			return () => obz.disconnect();
-		}, []);
+		setIsVertical(rootEl.clientWidth < rootEl.clientHeight);
 
-		useLayoutEffect(() => {
-			onLayoutChange?.(isVertical);
-		}, [isVertical, onLayoutChange]);
+		const obz = new ResizeObserver(() => {
+			const rootB = rootEl.getBoundingClientRect();
+			setIsVertical(rootB.width < rootB.height);
+		});
+		obz.observe(rootEl);
+		return () => obz.disconnect();
+	}, []);
 
-		// 如果分开使用两个布局，会导致不能衔接背景组件，导致两者间切换有闪屏情况
-		// 如果直接使用背景并各套一个 div，会导致无法应用 plus-lighter 效果
-		// 故借助 display: contents 来融合布局
+	useLayoutEffect(() => {
+		onLayoutChange?.(isVertical);
+	}, [isVertical, onLayoutChange]);
 
-		return (
-			<div ref={rootRef} {...rest}>
-				<div className={styles.background}>{backgroundSlot}</div>
-				{isVertical ? (
-					<VerticalLayout
-						thumbSlot={thumbSlot}
-						smallControlsSlot={smallControlsSlot}
-						bigControlsSlot={bigControlsSlot}
-						coverSlot={coverSlot}
-						lyricSlot={lyricSlot}
-						hideLyric={hideLyric}
-						immerseCover={verticalImmerseCover}
-					/>
-				) : (
-					<HorizontalLayout
-						// style={{ display: "contents" }}
-						// asChild
-						thumbSlot={thumbSlot}
-						controlsSlot={controlsSlot}
-						coverSlot={coverSlot}
-						lyricSlot={lyricSlot}
-						bottomControls={horizontalBottomControls}
-						hideLyric={hideLyric}
-					/>
-				)}
-			</div>
-		);
-	},
-);
+	// 如果分开使用两个布局，会导致不能衔接背景组件，导致两者间切换有闪屏情况
+	// 如果直接使用背景并各套一个 div，会导致无法应用 plus-lighter 效果
+	// 故借助 display: contents 来融合布局
+
+	return (
+		<div ref={setRefs} {...rest}>
+			<div className={styles.background}>{backgroundSlot}</div>
+			{isVertical ? (
+				<VerticalLayout
+					thumbSlot={thumbSlot}
+					smallControlsSlot={smallControlsSlot}
+					bigControlsSlot={bigControlsSlot}
+					coverSlot={coverSlot}
+					lyricSlot={lyricSlot}
+					hideLyric={hideLyric}
+					immerseCover={verticalImmerseCover}
+				/>
+			) : (
+				<HorizontalLayout
+					thumbSlot={thumbSlot}
+					controlsSlot={controlsSlot}
+					coverSlot={coverSlot}
+					lyricSlot={lyricSlot}
+					bottomControls={horizontalBottomControls}
+					hideLyric={hideLyric}
+				/>
+			)}
+		</div>
+	);
+};

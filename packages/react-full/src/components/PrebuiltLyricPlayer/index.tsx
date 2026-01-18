@@ -500,7 +500,7 @@ export const PrebuiltLyricPlayer: FC<HTMLProps<HTMLDivElement>> = ({
 		"top",
 	);
 	const coverElRef = useRef<HTMLDivElement>(null);
-	const layoutRef = useRef<HTMLDivElement>(null);
+	const [layoutEl, setLayoutEl] = useState<HTMLDivElement | null>(null);
 	const backgroundRenderer = useAtomValue(lyricBackgroundRendererAtom);
 	const showBottomControl = useAtomValue(showBottomControlAtom);
 
@@ -511,26 +511,26 @@ export const PrebuiltLyricPlayer: FC<HTMLProps<HTMLDivElement>> = ({
 
 	useLayoutEffect(() => {
 		// 如果是水平布局，则让歌词对齐到封面的中心
-		if (!isVertical && coverElRef.current && layoutRef.current) {
+		if (!isVertical && coverElRef.current && layoutEl) {
 			const obz = new ResizeObserver(() => {
-				if (!(coverElRef.current && layoutRef.current)) return;
+				if (!(coverElRef.current && layoutEl)) return;
 				const coverB = coverElRef.current.getBoundingClientRect();
-				const layoutB = layoutRef.current.getBoundingClientRect();
+				const layoutB = layoutEl.getBoundingClientRect();
 				setAlignPosition(
 					(coverB.top + coverB.height / 2 - layoutB.top) / layoutB.height,
 				);
 			});
 			obz.observe(coverElRef.current);
-			obz.observe(layoutRef.current);
+			obz.observe(layoutEl);
 			setAlignAnchor("center");
 			return () => obz.disconnect();
 		}
 		// 如果是垂直布局，则把歌词对齐到顶部（歌曲信息下方）
-		if (isVertical && layoutRef.current) {
+		if (isVertical) {
 			setAlignPosition(0.1);
 			setAlignAnchor("top");
 		}
-	}, [isVertical]);
+	}, [isVertical, layoutEl]);
 
 	useEffect(() => {
 		if (isLyricPageOpened) {
@@ -585,7 +585,7 @@ export const PrebuiltLyricPlayer: FC<HTMLProps<HTMLDivElement>> = ({
 	return (
 		<LayoutGroup>
 			<AutoLyricLayout
-				ref={layoutRef}
+				onElementMounted={setLayoutEl}
 				className={classNames(styles.autoLyricLayout, className)}
 				onLayoutChange={setIsVertical}
 				verticalImmerseCover={verticalImmerseCover}
