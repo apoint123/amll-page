@@ -27,13 +27,18 @@ export const AMLLWrapper: FC = () => {
 		<>
 			<ContextMenu.Root>
 				<ContextMenu.Trigger>
-					<PrebuiltLyricPlayer
-						id="amll-lyric-player"
+					<div
 						className={classnames(
 							styles.lyricPage,
 							isLyricPageOpened && styles.opened,
 						)}
-					/>
+						id="amll-lyric-player-wrapper"
+					>
+						<PrebuiltLyricPlayer
+							id="amll-lyric-player"
+							style={{ width: "100%", height: "100%" }}
+						/>
+					</div>
 				</ContextMenu.Trigger>
 				<AMLLContextMenuContent />
 			</ContextMenu.Root>

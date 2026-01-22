@@ -75,7 +75,7 @@ export const AutoLyricLayout: React.FC<
 	// 故借助 display: contents 来融合布局
 
 	return (
-		<div ref={setRefs} {...rest}>
+		<div {...rest} ref={setRefs}>
 			<div className={styles.background}>{backgroundSlot}</div>
 			{isVertical ? (
 				<VerticalLayout
