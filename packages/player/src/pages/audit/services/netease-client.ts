@@ -194,7 +194,14 @@ export const NeteaseClient = {
 				params: { id, level },
 				cookie,
 			});
-			return res.data?.[0]?.url || null;
+
+			const originUrl = res.data?.[0]?.url;
+
+			if (originUrl) {
+				return originUrl.replace(/^http:/, "https:");
+			}
+
+			return null;
 		},
 	},
 };
