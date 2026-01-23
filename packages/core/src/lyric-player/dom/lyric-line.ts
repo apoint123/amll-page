@@ -394,6 +394,10 @@ export class LyricLineEl extends LyricLineBase {
 
 		const characterElements: HTMLElement[] = [];
 		for (const word of chunk) {
+			if (!word.word.trim()) {
+				wrapperWordEl.appendChild(document.createTextNode(word.word));
+				continue;
+			}
 			const mainWordEl = document.createElement("span");
 			if (emp) {
 				mainWordEl.classList.add(styles.emphasize);
@@ -465,14 +469,7 @@ export class LyricLineEl extends LyricLineBase {
 			);
 		}
 
-		// 前后空格处理（保持原有判断）
-		if (merged.word.trimStart() !== merged.word) {
-			main.appendChild(document.createTextNode(" "));
-		}
 		main.appendChild(wrapperWordEl);
-		if (merged.word.trimEnd() !== merged.word) {
-			main.appendChild(document.createTextNode(" "));
-		}
 	}
 
 	/** 渲染单个词（含强调与音译处理） */

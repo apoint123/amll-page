@@ -35,11 +35,15 @@ export function chunkAndSplitLyricWords(
 
 		for (const part of parts) {
 			if (!part.trim()) {
+				const startTime =
+					w.startTime +
+					(currentOffset / totalLength) * (w.endTime - w.startTime);
+
 				atoms.push({
 					word: part,
 					romanWord: "",
-					startTime: 0,
-					endTime: 0,
+					startTime: startTime,
+					endTime: startTime,
 				});
 				continue;
 			}
