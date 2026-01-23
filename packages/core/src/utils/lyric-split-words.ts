@@ -1,6 +1,5 @@
 import type { LyricWord } from "../interfaces.ts";
-
-const CJKEXP = /^[\p{Unified_Ideograph}\u0800-\u9FFC]+$/u;
+import { isCJK } from "./is-cjk.ts";
 
 const hasSegmenter =
 	typeof Intl !== "undefined" && typeof Intl.Segmenter !== "undefined";
@@ -48,7 +47,7 @@ export function chunkAndSplitLyricWords(
 				continue;
 			}
 
-			if (CJKEXP.test(part) && part.length > 1 && !w.romanWord) {
+			if (isCJK(part) && part.length > 1 && !w.romanWord) {
 				const chars = part.split("");
 				for (const char of chars) {
 					const charDuration = (1 / totalLength) * (w.endTime - w.startTime);

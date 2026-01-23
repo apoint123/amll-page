@@ -1,6 +1,7 @@
 import bezier from "bezier-easing";
 import type { LyricLine, LyricWord } from "../../interfaces.ts";
 import styles from "../../styles/lyric-player.module.css";
+import { isCJK } from "../../utils/is-cjk.ts";
 import { chunkAndSplitLyricWords } from "../../utils/lyric-split-words.ts";
 import {
 	createMatrix4,
@@ -345,19 +346,11 @@ export class LyricLineEl extends LyricLineBase {
 
 		const chunkedWords = chunkAndSplitLyricWords(this.lyricLine.words);
 		main.innerHTML = "";
+
 		for (const chunk of chunkedWords) {
-			if (Array.isArray(chunk)) {
-				// 多个没有空格的单词组合在一起
-				if (chunk.length === 0) continue;
-				this.buildChunkGroup(chunk, main);
-			} else if (chunk.word.trim().length === 0) {
-				// 纯空格
-				main.appendChild(document.createTextNode(" "));
-			} else {
-				// 单个单词
-				this.buildSingleWord(chunk, main);
-			}
+			this.buildWord(chunk, main);
 		}
+
 		this.setSubLinesText(trans, roman);
 	}
 
@@ -367,9 +360,56 @@ export class LyricLineEl extends LyricLineBase {
 		roman.innerText = this.lyricLine.romanLyric;
 	}
 
-	/** 处理一组连写（无空格）单词，包含强调效果 */
-	private buildChunkGroup(chunk: LyricWord[], main: HTMLDivElement) {
-		// 聚合区间与文本作为合并词
+	private createWord(word: LyricWord, shouldEmphasize: boolean): RealWord {
+		const mainWordEl = document.createElement("span");
+		const subElements: HTMLSpanElement[] = [];
+
+		if (shouldEmphasize) {
+			mainWordEl.classList.add(styles.emphasize);
+			for (const char of word.word.trim()) {
+				const charEl = document.createElement("span");
+				charEl.innerText = char;
+				subElements.push(charEl);
+				mainWordEl.appendChild(charEl);
+			}
+		} else {
+			if (!word.romanWord || word.romanWord.trim().length === 0) {
+				mainWordEl.innerText = word.word.trim();
+			}
+		}
+
+		if (word.romanWord && word.romanWord.trim().length > 0) {
+			if (!shouldEmphasize) {
+				const wordEl = document.createElement("div");
+				wordEl.innerText = word.word.trim();
+				mainWordEl.appendChild(wordEl);
+			}
+
+			const romanWordEl = document.createElement("div");
+			romanWordEl.innerText = word.romanWord.trim();
+			romanWordEl.classList.add(styles.romanWord);
+			mainWordEl.appendChild(romanWordEl);
+		}
+
+		const realWord: RealWord = {
+			...word,
+			mainElement: mainWordEl,
+			subElements: subElements,
+			elementAnimations: [this.initFloatAnimation(word, mainWordEl)],
+			maskAnimations: [],
+			width: 0,
+			height: 0,
+			padding: 0,
+			shouldEmphasize: shouldEmphasize,
+		};
+
+		return realWord;
+	}
+
+	private buildWord(input: LyricWord | LyricWord[], main: HTMLDivElement) {
+		const chunk = Array.isArray(input) ? input : [input];
+		if (chunk.length === 0) return;
+
 		const merged = chunk.reduce(
 			(a, b) => {
 				a.endTime = Math.max(a.endTime, b.endTime);
@@ -385,81 +425,37 @@ export class LyricLineEl extends LyricLineBase {
 				wordType: "normal",
 			} as LyricWord,
 		);
-		const emp = chunk
-			.map((word) => LyricLineBase.shouldEmphasize(word))
-			.reduce((a, b) => a || b, LyricLineBase.shouldEmphasize(merged));
+
+		let emp = chunk.some((word) => LyricLineBase.shouldEmphasize(word));
+		if (!isCJK(merged.word)) {
+			emp = emp || LyricLineBase.shouldEmphasize(merged);
+		}
 
 		const wrapperWordEl = document.createElement("span");
 		wrapperWordEl.classList.add(styles.emphasizeWrapper);
 
 		const characterElements: HTMLElement[] = [];
+
 		for (const word of chunk) {
 			if (!word.word.trim()) {
 				wrapperWordEl.appendChild(document.createTextNode(word.word));
 				continue;
 			}
-			const mainWordEl = document.createElement("span");
+
+			const realWord = this.createWord(word, emp);
+
 			if (emp) {
-				mainWordEl.classList.add(styles.emphasize);
-				const charEls: HTMLSpanElement[] = [];
-				for (const char of word.word.trim()) {
-					const charEl = document.createElement("span");
-					charEl.innerText = char;
-					charEls.push(charEl);
-					characterElements.push(charEl);
-					mainWordEl.appendChild(charEl);
-				}
-
-				if (word.romanWord && word.romanWord.trim().length > 0) {
-					const romanWordEl = document.createElement("div");
-					romanWordEl.innerText = word.romanWord;
-					romanWordEl.classList.add(styles.romanWord);
-					mainWordEl.appendChild(romanWordEl);
-				}
-
-				const realWord: RealWord = {
-					...word,
-					mainElement: mainWordEl,
-					subElements: charEls,
-					elementAnimations: [this.initFloatAnimation(word, mainWordEl)],
-					maskAnimations: [],
-					width: 0,
-					height: 0,
-					padding: 0,
-					shouldEmphasize: emp,
-				};
-				this.splittedWords.push(realWord);
-			} else {
-				// 普通显示（可能含音译）
-				if (word.romanWord && word.romanWord.trim().length > 0) {
-					const wordEl = document.createElement("div");
-					const romanWordEl = document.createElement("div");
-					wordEl.innerText = word.word.trim();
-					romanWordEl.innerText = word.romanWord.trim();
-					romanWordEl.classList.add(styles.romanWord);
-					mainWordEl.appendChild(wordEl);
-					mainWordEl.appendChild(romanWordEl);
-				} else {
-					mainWordEl.innerText = word.word.trim();
-				}
-				this.splittedWords.push({
-					...word,
-					mainElement: mainWordEl,
-					subElements: [],
-					elementAnimations: [this.initFloatAnimation(word, mainWordEl)],
-					maskAnimations: [],
-					width: 0,
-					height: 0,
-					padding: 0,
-					shouldEmphasize: emp,
-				});
+				characterElements.push(...realWord.subElements);
 			}
-			wrapperWordEl.appendChild(mainWordEl);
+
+			this.splittedWords.push(realWord);
+			wrapperWordEl.appendChild(realWord.mainElement);
 		}
 
-		// 组强调动画追加到该组的最后一个词的动画列表（保持原逻辑）
-		if (emp) {
-			this.splittedWords[this.splittedWords.length - 1].elementAnimations.push(
+		if (emp && this.splittedWords.length > 0) {
+			const lastWordOfChunk = this.splittedWords[this.splittedWords.length - 1];
+
+			lastWordOfChunk.elementAnimations.push(
 				...this.initEmphasizeAnimation(
 					merged,
 					characterElements,
@@ -472,71 +468,6 @@ export class LyricLineEl extends LyricLineBase {
 		main.appendChild(wrapperWordEl);
 	}
 
-	/** 渲染单个词（含强调与音译处理） */
-	private buildSingleWord(chunk: LyricWord, main: HTMLDivElement) {
-		const emp = LyricLineBase.shouldEmphasize(chunk);
-		const mainWordEl = document.createElement("span");
-		const realWord: RealWord = {
-			...chunk,
-			mainElement: mainWordEl,
-			subElements: [],
-			elementAnimations: [this.initFloatAnimation(chunk, mainWordEl)],
-			maskAnimations: [],
-			width: 0,
-			height: 0,
-			padding: 0,
-			shouldEmphasize: emp,
-		};
-
-		if (emp) {
-			mainWordEl.classList.add(styles.emphasize);
-			const charEls: HTMLSpanElement[] = [];
-			for (const char of chunk.word.trim()) {
-				const charEl = document.createElement("span");
-				charEl.innerText = char;
-				charEls.push(charEl);
-				mainWordEl.appendChild(charEl);
-			}
-			if (chunk.romanWord && chunk.romanWord.trim().length > 0) {
-				const romanWordEl = document.createElement("div");
-				romanWordEl.innerText = chunk.romanWord;
-				romanWordEl.classList.add(styles.romanWord);
-				mainWordEl.appendChild(romanWordEl);
-			}
-			realWord.subElements = charEls;
-			const duration = Math.abs(realWord.endTime - realWord.startTime);
-			realWord.elementAnimations.push(
-				...this.initEmphasizeAnimation(
-					chunk,
-					charEls,
-					duration,
-					realWord.startTime - this.lyricLine.startTime,
-				),
-			);
-		} else {
-			if (chunk.romanWord && chunk.romanWord.trim().length > 0) {
-				const wordEl = document.createElement("div");
-				const romanWordEl = document.createElement("div");
-				wordEl.innerText = chunk.word;
-				romanWordEl.innerText = chunk.romanWord;
-				romanWordEl.classList.add(styles.romanWord);
-				mainWordEl.appendChild(wordEl);
-				mainWordEl.appendChild(romanWordEl);
-			} else {
-				mainWordEl.innerText = chunk.word.trim();
-			}
-		}
-
-		// 前后空格处理
-		if (chunk.word.trimStart() !== chunk.word) {
-			main.appendChild(document.createTextNode(" "));
-		}
-		main.appendChild(mainWordEl);
-		if (chunk.word.trimEnd() !== chunk.word) {
-			main.appendChild(document.createTextNode(" "));
-		}
-		this.splittedWords.push(realWord);
-	}
 	private initFloatAnimation(word: LyricWord, wordEl: HTMLSpanElement) {
 		const delay = word.startTime - this.lyricLine.startTime;
 		const duration = Math.max(1000, word.endTime - word.startTime);
