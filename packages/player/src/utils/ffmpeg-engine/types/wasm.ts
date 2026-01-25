@@ -36,18 +36,30 @@ export interface AudioProperties {
 	bitsPerSample: number;
 }
 
+export enum SampleFormat {
+	PlanarF32 = 0,
+	InterleavedS16 = 1,
+}
+
 export interface ChunkResult {
 	status: DecoderStatus;
-	samples: Float32Array;
+	samples: Float32Array | Int16Array;
 	isEOF: boolean;
 	startTime: number;
 }
 
 export interface AudioStreamDecoder extends EmbindObject {
 	init(path: string): AudioProperties;
-	readChunk(chunkSize: number): ChunkResult;
+	initStream(
+		readCallback: (ptr: number, size: number) => number,
+		seekCallback: (offset: number, whence: number) => number,
+	): AudioProperties;
+	readChunk(chunkSize: number, format?: SampleFormat): ChunkResult;
 	seek(timestamp: number): DecoderStatus;
 	close(): void;
+	setTempo(tempo: number): void;
+	setPitch(pitch: number): void;
+	delete(): void;
 }
 
 export interface AudioDecoderModule extends EmscriptenModule {
@@ -59,4 +71,5 @@ export interface AudioDecoderModule extends EmscriptenModule {
 	AudioStreamDecoder: {
 		new (): AudioStreamDecoder;
 	};
+	SampleFormat: typeof SampleFormat;
 }

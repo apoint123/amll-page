@@ -73,7 +73,7 @@ export const useMediaSession = () => {
 
 		audioPlayer.addEventListener("play", updatePosition);
 		audioPlayer.addEventListener("pause", updatePosition);
-		audioPlayer.addEventListener("loaded", updatePosition);
+		audioPlayer.addEventListener("loadstart", updatePosition);
 		audioPlayer.addEventListener("seeked", updatePosition);
 
 		updatePosition();
@@ -81,7 +81,7 @@ export const useMediaSession = () => {
 		return () => {
 			audioPlayer.removeEventListener("play", updatePosition);
 			audioPlayer.removeEventListener("pause", updatePosition);
-			audioPlayer.removeEventListener("loaded", updatePosition);
+			audioPlayer.removeEventListener("loadstart", updatePosition);
 			audioPlayer.removeEventListener("seeked", updatePosition);
 		};
 	}, [updatePosition]);

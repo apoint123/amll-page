@@ -161,7 +161,7 @@ function updateMemoryViews() {
   var b = wasmMemory.buffer;
   HEAP8 = new Int8Array(b);
   HEAP16 = new Int16Array(b);
-  HEAPU8 = new Uint8Array(b);
+  Module["HEAPU8"] = HEAPU8 = new Uint8Array(b);
   HEAPU16 = new Uint16Array(b);
   HEAP32 = new Int32Array(b);
   HEAPU32 = new Uint32Array(b);
@@ -191,7 +191,7 @@ function initRuntime() {
   if (!Module["noFSInit"] && !FS.initialized) FS.init();
   TTY.init();
   // End ATINITS hooks
-  wasmExports["_"]();
+  wasmExports["ca"]();
   // Begin ATPOSTCTORS hooks
   FS.ignorePermissions = false;
 }
@@ -240,10 +240,10 @@ var wasmBinaryFile;
 
 function findWasmBinary() {
   if (Module["locateFile"]) {
-    return locateFile("decode-audio.wasm");
+    return locateFile("ffmpeg.wasm");
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL("decode-audio.wasm", import.meta.url).href;
+  return new URL("ffmpeg.wasm", import.meta.url).href;
 }
 
 function getBinarySync(file) {
@@ -3281,6 +3281,128 @@ function ___syscall_getdents64(fd, dirp, count) {
   }
 }
 
+function ___syscall_ioctl(fd, op, varargs) {
+  SYSCALLS.varargs = varargs;
+  try {
+    var stream = SYSCALLS.getStreamFromFD(fd);
+    switch (op) {
+     case 21509:
+      {
+        if (!stream.tty) return -59;
+        return 0;
+      }
+
+     case 21505:
+      {
+        if (!stream.tty) return -59;
+        if (stream.tty.ops.ioctl_tcgets) {
+          var termios = stream.tty.ops.ioctl_tcgets(stream);
+          var argp = syscallGetVarargP();
+          HEAP32[((argp) >> 2)] = termios.c_iflag || 0;
+          HEAP32[(((argp) + (4)) >> 2)] = termios.c_oflag || 0;
+          HEAP32[(((argp) + (8)) >> 2)] = termios.c_cflag || 0;
+          HEAP32[(((argp) + (12)) >> 2)] = termios.c_lflag || 0;
+          for (var i = 0; i < 32; i++) {
+            HEAP8[(argp + i) + (17)] = termios.c_cc[i] || 0;
+          }
+          return 0;
+        }
+        return 0;
+      }
+
+     case 21510:
+     case 21511:
+     case 21512:
+      {
+        if (!stream.tty) return -59;
+        return 0;
+      }
+
+     case 21506:
+     case 21507:
+     case 21508:
+      {
+        if (!stream.tty) return -59;
+        if (stream.tty.ops.ioctl_tcsets) {
+          var argp = syscallGetVarargP();
+          var c_iflag = HEAP32[((argp) >> 2)];
+          var c_oflag = HEAP32[(((argp) + (4)) >> 2)];
+          var c_cflag = HEAP32[(((argp) + (8)) >> 2)];
+          var c_lflag = HEAP32[(((argp) + (12)) >> 2)];
+          var c_cc = [];
+          for (var i = 0; i < 32; i++) {
+            c_cc.push(HEAP8[(argp + i) + (17)]);
+          }
+          return stream.tty.ops.ioctl_tcsets(stream.tty, op, {
+            c_iflag,
+            c_oflag,
+            c_cflag,
+            c_lflag,
+            c_cc
+          });
+        }
+        return 0;
+      }
+
+     case 21519:
+      {
+        if (!stream.tty) return -59;
+        var argp = syscallGetVarargP();
+        HEAP32[((argp) >> 2)] = 0;
+        return 0;
+      }
+
+     case 21520:
+      {
+        if (!stream.tty) return -59;
+        return -28;
+      }
+
+     case 21537:
+     case 21531:
+      {
+        var argp = syscallGetVarargP();
+        return FS.ioctl(stream, op, argp);
+      }
+
+     case 21523:
+      {
+        // TODO: in theory we should write to the winsize struct that gets
+        // passed in, but for now musl doesn't read anything on it
+        if (!stream.tty) return -59;
+        if (stream.tty.ops.ioctl_tiocgwinsz) {
+          var winsize = stream.tty.ops.ioctl_tiocgwinsz(stream.tty);
+          var argp = syscallGetVarargP();
+          HEAP16[((argp) >> 1)] = winsize[0];
+          HEAP16[(((argp) + (2)) >> 1)] = winsize[1];
+        }
+        return 0;
+      }
+
+     case 21524:
+      {
+        // TODO: technically, this ioctl call should change the window size.
+        // but, since emscripten doesn't have any concept of a terminal window
+        // yet, we'll just silently throw it away as we do TIOCGWINSZ
+        if (!stream.tty) return -59;
+        return 0;
+      }
+
+     case 21515:
+      {
+        if (!stream.tty) return -59;
+        return 0;
+      }
+
+     default:
+      return -28;
+    }
+  } catch (e) {
+    if (typeof FS == "undefined" || !(e.name === "ErrnoError")) throw e;
+    return -e.errno;
+  }
+}
+
 function ___syscall_lstat64(path, buf) {
   try {
     path = SYSCALLS.getStr(path);
@@ -4516,6 +4638,75 @@ var EmValType = {
 
 var __embind_register_emval = rawType => registerType(rawType, EmValType);
 
+var enumReadValueFromPointer = (name, width, signed) => {
+  switch (width) {
+   case 1:
+    return signed ? function(pointer) {
+      return this.fromWireType(HEAP8[pointer]);
+    } : function(pointer) {
+      return this.fromWireType(HEAPU8[pointer]);
+    };
+
+   case 2:
+    return signed ? function(pointer) {
+      return this.fromWireType(HEAP16[((pointer) >> 1)]);
+    } : function(pointer) {
+      return this.fromWireType(HEAPU16[((pointer) >> 1)]);
+    };
+
+   case 4:
+    return signed ? function(pointer) {
+      return this.fromWireType(HEAP32[((pointer) >> 2)]);
+    } : function(pointer) {
+      return this.fromWireType(HEAPU32[((pointer) >> 2)]);
+    };
+
+   default:
+    throw new TypeError(`invalid integer width (${width}): ${name}`);
+  }
+};
+
+/** @suppress {globalThis} */ var __embind_register_enum = (rawType, name, size, isSigned) => {
+  name = AsciiToString(name);
+  function ctor() {}
+  ctor.values = {};
+  registerType(rawType, {
+    name,
+    constructor: ctor,
+    fromWireType: function(c) {
+      return this.constructor.values[c];
+    },
+    toWireType: (destructors, c) => c.value,
+    readValueFromPointer: enumReadValueFromPointer(name, size, isSigned),
+    destructorFunction: null
+  });
+  exposePublicSymbol(name, ctor);
+};
+
+var requireRegisteredType = (rawType, humanName) => {
+  var impl = registeredTypes[rawType];
+  if (undefined === impl) {
+    throwBindingError(`${humanName} has unknown type ${getTypeName(rawType)}`);
+  }
+  return impl;
+};
+
+var __embind_register_enum_value = (rawEnumType, name, enumValue) => {
+  var enumType = requireRegisteredType(rawEnumType, "enum");
+  name = AsciiToString(name);
+  var Enum = enumType.constructor;
+  var Value = Object.create(enumType.constructor.prototype, {
+    value: {
+      value: enumValue
+    },
+    constructor: {
+      value: createNamedFunction(`${enumType.name}_${name}`, function() {})
+    }
+  });
+  Enum.values[enumValue] = Value;
+  Enum[name] = Value;
+};
+
 var floatReadValueFromPointer = (name, width) => {
   switch (width) {
    case 4:
@@ -4839,14 +5030,6 @@ var emval_addMethodCaller = caller => {
   return id;
 };
 
-var requireRegisteredType = (rawType, humanName) => {
-  var impl = registeredTypes[rawType];
-  if (undefined === impl) {
-    throwBindingError(`${humanName} has unknown type ${getTypeName(rawType)}`);
-  }
-  return impl;
-};
-
 var emval_lookupTypes = (argCount, argTypes) => {
   var a = new Array(argCount);
   for (var i = 0; i < argCount; ++i) {
@@ -4954,6 +5137,41 @@ function __gmtime_js(time, tmPtr) {
   var start = Date.UTC(date.getUTCFullYear(), 0, 1, 0, 0, 0, 0);
   var yday = ((date.getTime() - start) / (1e3 * 60 * 60 * 24)) | 0;
   HEAP32[(((tmPtr) + (28)) >> 2)] = yday;
+}
+
+var isLeapYear = year => year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+
+var MONTH_DAYS_LEAP_CUMULATIVE = [ 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335 ];
+
+var MONTH_DAYS_REGULAR_CUMULATIVE = [ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 ];
+
+var ydayFromDate = date => {
+  var leap = isLeapYear(date.getFullYear());
+  var monthDaysCumulative = (leap ? MONTH_DAYS_LEAP_CUMULATIVE : MONTH_DAYS_REGULAR_CUMULATIVE);
+  var yday = monthDaysCumulative[date.getMonth()] + date.getDate() - 1;
+  // -1 since it's days since Jan 1
+  return yday;
+};
+
+function __localtime_js(time, tmPtr) {
+  time = bigintToI53Checked(time);
+  var date = new Date(time * 1e3);
+  HEAP32[((tmPtr) >> 2)] = date.getSeconds();
+  HEAP32[(((tmPtr) + (4)) >> 2)] = date.getMinutes();
+  HEAP32[(((tmPtr) + (8)) >> 2)] = date.getHours();
+  HEAP32[(((tmPtr) + (12)) >> 2)] = date.getDate();
+  HEAP32[(((tmPtr) + (16)) >> 2)] = date.getMonth();
+  HEAP32[(((tmPtr) + (20)) >> 2)] = date.getFullYear() - 1900;
+  HEAP32[(((tmPtr) + (24)) >> 2)] = date.getDay();
+  var yday = ydayFromDate(date) | 0;
+  HEAP32[(((tmPtr) + (28)) >> 2)] = yday;
+  HEAP32[(((tmPtr) + (36)) >> 2)] = -(date.getTimezoneOffset() * 60);
+  // Attention: DST is in December in South, and some regions don't have DST at all.
+  var start = new Date(date.getFullYear(), 0, 1);
+  var summerOffset = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
+  var winterOffset = start.getTimezoneOffset();
+  var dst = (summerOffset != winterOffset && date.getTimezoneOffset() == Math.min(winterOffset, summerOffset)) | 0;
+  HEAP32[(((tmPtr) + (32)) >> 2)] = dst;
 }
 
 var timers = {};
@@ -5376,66 +5594,70 @@ Module["FS"] = FS;
 var _malloc, _free, ___getTypeName, __emscripten_timeout, memory, __indirect_function_table, wasmMemory, wasmTable;
 
 function assignWasmExports(wasmExports) {
-  _malloc = wasmExports["$"];
-  _free = wasmExports["ba"];
-  ___getTypeName = wasmExports["ca"];
-  __emscripten_timeout = wasmExports["da"];
-  memory = wasmMemory = wasmExports["Z"];
-  __indirect_function_table = wasmTable = wasmExports["aa"];
+  _malloc = wasmExports["da"];
+  _free = wasmExports["fa"];
+  ___getTypeName = wasmExports["ga"];
+  __emscripten_timeout = wasmExports["ha"];
+  memory = wasmMemory = wasmExports["ba"];
+  __indirect_function_table = wasmTable = wasmExports["ea"];
 }
 
 var wasmImports = {
-  /** @export */ g: ___assert_fail,
-  /** @export */ u: ___cxa_throw,
-  /** @export */ R: ___syscall_faccessat,
-  /** @export */ U: ___syscall_fcntl64,
-  /** @export */ O: ___syscall_fstat64,
-  /** @export */ D: ___syscall_getdents64,
-  /** @export */ M: ___syscall_lstat64,
-  /** @export */ L: ___syscall_newfstatat,
-  /** @export */ E: ___syscall_openat,
-  /** @export */ C: ___syscall_renameat,
-  /** @export */ B: ___syscall_rmdir,
-  /** @export */ N: ___syscall_stat64,
-  /** @export */ A: ___syscall_unlinkat,
-  /** @export */ S: __abort_js,
-  /** @export */ m: __embind_finalize_value_object,
-  /** @export */ t: __embind_register_bigint,
-  /** @export */ X: __embind_register_bool,
-  /** @export */ f: __embind_register_class,
-  /** @export */ e: __embind_register_class_constructor,
-  /** @export */ b: __embind_register_class_function,
-  /** @export */ V: __embind_register_emval,
-  /** @export */ s: __embind_register_float,
-  /** @export */ d: __embind_register_integer,
-  /** @export */ a: __embind_register_memory_view,
-  /** @export */ k: __embind_register_optional,
-  /** @export */ W: __embind_register_std_string,
-  /** @export */ o: __embind_register_std_wstring,
-  /** @export */ q: __embind_register_value_object,
-  /** @export */ c: __embind_register_value_object_field,
-  /** @export */ Y: __embind_register_void,
-  /** @export */ x: __emscripten_runtime_keepalive_clear,
-  /** @export */ j: __emval_create_invoker,
-  /** @export */ h: __emval_decref,
-  /** @export */ v: __emval_incref,
-  /** @export */ i: __emval_invoke,
-  /** @export */ p: __emval_run_destructors,
-  /** @export */ F: __gmtime_js,
-  /** @export */ y: __setitimer_js,
-  /** @export */ G: __tzset_js,
-  /** @export */ Q: _clock_time_get,
-  /** @export */ P: _emscripten_date_now,
-  /** @export */ l: _emscripten_get_now,
-  /** @export */ z: _emscripten_resize_heap,
-  /** @export */ J: _environ_get,
-  /** @export */ K: _environ_sizes_get,
-  /** @export */ n: _fd_close,
-  /** @export */ I: _fd_fdstat_get,
-  /** @export */ T: _fd_read,
-  /** @export */ H: _fd_seek,
-  /** @export */ r: _fd_write,
-  /** @export */ w: _proc_exit
+  /** @export */ m: ___assert_fail,
+  /** @export */ g: ___cxa_throw,
+  /** @export */ V: ___syscall_faccessat,
+  /** @export */ r: ___syscall_fcntl64,
+  /** @export */ S: ___syscall_fstat64,
+  /** @export */ G: ___syscall_getdents64,
+  /** @export */ X: ___syscall_ioctl,
+  /** @export */ Q: ___syscall_lstat64,
+  /** @export */ P: ___syscall_newfstatat,
+  /** @export */ H: ___syscall_openat,
+  /** @export */ F: ___syscall_renameat,
+  /** @export */ E: ___syscall_rmdir,
+  /** @export */ R: ___syscall_stat64,
+  /** @export */ D: ___syscall_unlinkat,
+  /** @export */ W: __abort_js,
+  /** @export */ p: __embind_finalize_value_object,
+  /** @export */ x: __embind_register_bigint,
+  /** @export */ _: __embind_register_bool,
+  /** @export */ l: __embind_register_class,
+  /** @export */ k: __embind_register_class_constructor,
+  /** @export */ a: __embind_register_class_function,
+  /** @export */ Y: __embind_register_emval,
+  /** @export */ aa: __embind_register_enum,
+  /** @export */ y: __embind_register_enum_value,
+  /** @export */ w: __embind_register_float,
+  /** @export */ e: __embind_register_integer,
+  /** @export */ b: __embind_register_memory_view,
+  /** @export */ o: __embind_register_optional,
+  /** @export */ Z: __embind_register_std_string,
+  /** @export */ s: __embind_register_std_wstring,
+  /** @export */ t: __embind_register_value_object,
+  /** @export */ d: __embind_register_value_object_field,
+  /** @export */ $: __embind_register_void,
+  /** @export */ A: __emscripten_runtime_keepalive_clear,
+  /** @export */ f: __emval_create_invoker,
+  /** @export */ c: __emval_decref,
+  /** @export */ j: __emval_incref,
+  /** @export */ h: __emval_invoke,
+  /** @export */ i: __emval_run_destructors,
+  /** @export */ I: __gmtime_js,
+  /** @export */ J: __localtime_js,
+  /** @export */ B: __setitimer_js,
+  /** @export */ K: __tzset_js,
+  /** @export */ U: _clock_time_get,
+  /** @export */ T: _emscripten_date_now,
+  /** @export */ n: _emscripten_get_now,
+  /** @export */ C: _emscripten_resize_heap,
+  /** @export */ N: _environ_get,
+  /** @export */ O: _environ_sizes_get,
+  /** @export */ q: _fd_close,
+  /** @export */ M: _fd_fdstat_get,
+  /** @export */ v: _fd_read,
+  /** @export */ L: _fd_seek,
+  /** @export */ u: _fd_write,
+  /** @export */ z: _proc_exit
 };
 
 // include: postamble.js
