@@ -30,6 +30,7 @@ export interface PlayerEventMap {
 	volumechange: number;
 	durationchange: number;
 	ended: undefined;
+	sourcedownloaded: Blob;
 	error: string;
 	emptied: undefined;
 }

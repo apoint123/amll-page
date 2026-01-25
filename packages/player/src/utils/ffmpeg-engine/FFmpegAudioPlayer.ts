@@ -1,5 +1,6 @@
 import { toError } from "../errorUtils";
 import { type GetDetail, TypedEventTarget } from "../TypedEventTarget";
+import FFmpegWorker from "./ffmpeg.worker?worker";
 import { SharedRingBuffer } from "./SharedRingBuffer";
 import type {
 	AudioMetadata,
@@ -8,7 +9,6 @@ import type {
 	WorkerRequest,
 	WorkerResponse,
 } from "./types";
-import FFmpegWorker from "./ffmpeg.worker?worker";
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 	? Omit<T, K>
@@ -239,16 +239,31 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 
 			this.notifyWorkerSeek();
 
+			const chunks: Uint8Array[] = [];
+
 			while (true) {
 				const { done, value } = await reader.read();
 
 				if (done) {
 					this.ringBuffer?.setEOF();
+
+					if (startOffset === 0 && !signal.aborted) {
+						const blob = new Blob(chunks as BlobPart[], {
+							type: response.headers.get("Content-Type") || "audio/mpeg",
+						});
+						this.dispatch("sourcedownloaded", blob);
+					}
 					break;
 				}
 
-				if (value && this.ringBuffer) {
-					await this.ringBuffer.write(value);
+				if (value) {
+					if (startOffset === 0) {
+						chunks.push(value);
+					}
+
+					if (this.ringBuffer) {
+						await this.ringBuffer.write(value);
+					}
 				}
 
 				if (signal.aborted) break;

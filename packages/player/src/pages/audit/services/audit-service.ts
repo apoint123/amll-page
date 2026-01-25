@@ -4,6 +4,7 @@ import {
 	type Playlist,
 	type Song,
 } from "../../../dexie";
+import { tempAudioStore } from "../../../states/tempAudioStore";
 import { extractMusicMetadata } from "../../../utils/music-file";
 import { parseTTML } from "../../../utils/parseTTML";
 import {
@@ -218,9 +219,7 @@ export class AuditService {
 				coverUrl: sourceResult.metadata?.coverUrl || "",
 			};
 
-			const downloadPromises: Promise<Blob>[] = [
-				fetch(sourceResult.audioUrl).then((r) => r.blob()),
-			];
+			const downloadPromises: Promise<Blob>[] = [];
 
 			if (finalMetadata.coverUrl) {
 				downloadPromises.push(
@@ -230,7 +229,8 @@ export class AuditService {
 				downloadPromises.push(Promise.resolve(new Blob()));
 			}
 
-			const [audioBlob, coverBlob] = await Promise.all(downloadPromises);
+			const [coverBlob] = await Promise.all(downloadPromises);
+			tempAudioStore.set(newSongId, sourceResult.audioUrl);
 
 			const oldSong = await db.songs.get(oldSongId);
 			if (!oldSong) throw new Error("Base song not found");
@@ -242,7 +242,7 @@ export class AuditService {
 				songArtists: finalMetadata.artist,
 				songAlbum: finalMetadata.album,
 				cover: coverBlob,
-				file: audioBlob,
+				file: new Blob(),
 				accessTime: Date.now(),
 			};
 

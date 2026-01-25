@@ -46,6 +46,7 @@ import {
 	onRequestPlaySongByIndexAtom,
 	originalQueueAtom,
 } from "../../states/appAtoms.ts";
+import { tempAudioStore } from "../../states/tempAudioStore.ts";
 import { audioPlayer } from "../../utils/ffmpeg-engine/FFmpegAudioPlayer";
 import { compressCoverImage } from "../../utils/image.ts";
 import {
@@ -312,16 +313,19 @@ export const LocalMusicContext: FC = () => {
 			const songId = queue[targetIndex];
 			const song = await db.songs.get(songId);
 
-			if (!song || !(song.file instanceof Blob)) {
+			const tempUrl = tempAudioStore.get(songId);
+
+			if (!song || (!(song.file instanceof Blob) && !tempUrl)) {
 				toast.error("无法播放，找不到歌曲文件。");
 				return;
 			}
 
 			try {
-				const { metadata } = await extractMusicMetadata(song.file);
-				const qualityState = mapMetadataToQuality(metadata);
-
-				store.set(musicQualityAtom, qualityState);
+				if (song.file instanceof Blob) {
+					const { metadata } = await extractMusicMetadata(song.file);
+					const qualityState = mapMetadataToQuality(metadata);
+					store.set(musicQualityAtom, qualityState);
+				}
 			} catch (e) {
 				console.warn("解析音频质量失败", e);
 				store.set(musicQualityAtom, {
@@ -350,10 +354,17 @@ export const LocalMusicContext: FC = () => {
 			store.set(musicIdAtom, song.id);
 			store.set(currentMusicIndexAtom, targetIndex);
 
-			const file = new File([song.file], song.filePath, {
-				type: song.file.type,
-			});
-			await audioPlayer.load(file);
+			store.set(currentMusicIndexAtom, targetIndex);
+
+			if (song.file instanceof Blob && song.file.size > 0) {
+				const file = new File([song.file], song.filePath, {
+					type: song.file.type,
+				});
+				await audioPlayer.load(file);
+			} else if (tempUrl) {
+				await audioPlayer.loadSrc(tempUrl);
+			}
+
 			await audioPlayer.play();
 			store.set(musicPlayingAtom, true);
 		};
@@ -536,6 +547,17 @@ export const LocalMusicContext: FC = () => {
 			store.set(musicPlayingPositionAtom, (e.detail * 1000) | 0);
 		};
 
+		const handleSourceDownloaded = (e: CustomEvent<Blob>) => {
+			const blob = e.detail;
+			const currentId = store.get(musicIdAtom);
+			if (currentId) {
+				db.songs.update(currentId, { file: blob }).then(() => {
+					console.log(`[Player] Cached song: ${currentId}`);
+					tempAudioStore.delete(currentId);
+				});
+			}
+		};
+
 		audioPlayer.addEventListener("play", handlePlay);
 		audioPlayer.addEventListener("pause", handlePause);
 		audioPlayer.addEventListener("ended", handleEnded);
@@ -544,6 +566,7 @@ export const LocalMusicContext: FC = () => {
 		audioPlayer.addEventListener("timeupdate", handleTimeUpdate);
 		audioPlayer.addEventListener("seeking", handleSeeking);
 		audioPlayer.addEventListener("seeked", handleSeeked);
+		audioPlayer.addEventListener("sourcedownloaded", handleSourceDownloaded);
 
 		return () => {
 			audioPlayer.removeEventListener("play", handlePlay);
@@ -554,6 +577,10 @@ export const LocalMusicContext: FC = () => {
 			audioPlayer.removeEventListener("timeupdate", handleTimeUpdate);
 			audioPlayer.removeEventListener("seeking", handleSeeking);
 			audioPlayer.removeEventListener("seeked", handleSeeked);
+			audioPlayer.removeEventListener(
+				"sourcedownloaded",
+				handleSourceDownloaded,
+			);
 
 			const doNothing = toEmit(() => {});
 			store.set(onRequestNextSongAtom, doNothing);
