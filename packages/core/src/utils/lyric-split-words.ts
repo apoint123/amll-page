@@ -91,25 +91,38 @@ export function chunkAndSplitLyricWords(
 
 	const result: (LyricWord | LyricWord[])[] = [];
 	let atomIndex = 0;
+	let currentAtomOffset = 0;
+	let currentSegmentOffset = 0;
 
 	for (const segment of segments) {
 		const segmentStr = segment.segment;
-		const segmentGroup: LyricWord[] = [];
+		const segmentLen = segmentStr.length;
 
-		let neededLength = segmentStr.length;
+		if (currentAtomOffset > currentSegmentOffset) {
+			currentSegmentOffset += segmentLen;
+			continue;
+		}
+
+		const segmentGroup: LyricWord[] = [];
+		let neededLength = segmentLen;
 
 		while (neededLength > 0 && atomIndex < atoms.length) {
 			const currentAtom = atoms[atomIndex];
 			const atomLen = currentAtom.word.length;
 
-			if (atomLen <= neededLength) {
-				segmentGroup.push(currentAtom);
-				neededLength -= atomLen;
-				atomIndex++;
-			} else {
-				segmentGroup.push(currentAtom);
-				neededLength = 0;
-				atomIndex++;
+			segmentGroup.push(currentAtom);
+
+			currentAtomOffset += atomLen;
+			atomIndex++;
+			neededLength -= atomLen;
+		}
+
+		currentSegmentOffset += segmentLen;
+
+		while (segmentGroup.length > 1 && !segmentGroup[0].word.trim()) {
+			const spaceAtom = segmentGroup.shift();
+			if (spaceAtom) {
+				result.push(spaceAtom);
 			}
 		}
 

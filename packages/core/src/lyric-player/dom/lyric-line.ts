@@ -417,6 +417,13 @@ export class LyricLineEl extends LyricLineBase {
 		const chunk = Array.isArray(input) ? input : [input];
 		if (chunk.length === 0) return;
 
+		const isPureSpace = chunk.every((w) => !w.word.trim());
+		if (isPureSpace) {
+			const textContent = chunk.map((w) => w.word).join("");
+			main.appendChild(document.createTextNode(textContent));
+			return;
+		}
+
 		const merged = chunk.reduce(
 			(a, b) => {
 				a.endTime = Math.max(a.endTime, b.endTime);
