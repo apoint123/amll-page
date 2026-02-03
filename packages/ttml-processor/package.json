@@ -22,5 +22,8 @@
 		"pkg/*.js",
 		"pkg/*.d.ts"
 	],
-	"types": "pkg/ttml_processor.d.ts"
+	"types": "pkg/ttml_processor.d.ts",
+	"dependencies": {
+		"wasm-pack": "^0.14.0"
+	}
 }

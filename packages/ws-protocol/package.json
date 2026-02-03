@@ -25,5 +25,8 @@
 	"sideEffects": [
 		"./pkg/ws_protocol.js",
 		"./pkg/snippets/*"
-	]
+	],
+	"dependencies": {
+		"wasm-pack": "^0.14.0"
+	}
 }

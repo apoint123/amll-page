@@ -26,5 +26,8 @@
 	"sideEffects": [
 		"./pkg/fft.js",
 		"./pkg/snippets/*"
-	]
+	],
+	"dependencies": {
+		"wasm-pack": "^0.14.0"
+	}
 }
