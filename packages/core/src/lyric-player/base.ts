@@ -8,6 +8,7 @@ import type {
 import styles from "../styles/lyric-player.module.css";
 import { eqSet } from "../utils/eq-set.ts";
 import { isCJK } from "../utils/is-cjk.ts";
+import { optimizeLyricLines } from "../utils/optimize-lyric.ts";
 import { Spring, type SpringParams } from "../utils/spring.ts";
 import { BottomLineEl } from "./bottom-line.ts";
 import { InterludeDots } from "./dom/interlude-dots.ts";
@@ -499,16 +500,13 @@ export abstract class LyricPlayerBase
 		if (import.meta.env.DEV) {
 			console.log("设置歌词行", lines, initialTime);
 		}
+
 		this.initialLayoutFinished = true;
-		for (const line of lines) {
-			for (const word of line.words) {
-				word.word = word.word.replace(/\s+/g, " ");
-			}
-		}
 		this.lastCurrentTime = initialTime;
 		this.currentTime = initialTime;
-		this.currentLyricLines = structuredClone(lines) as LyricLine[];
-		this.processedLines = structuredClone(lines) as LyricLine[];
+		this.currentLyricLines = structuredClone(lines);
+		this.processedLines = structuredClone(this.currentLyricLines);
+		optimizeLyricLines(this.processedLines);
 
 		this.isNonDynamic = true;
 		for (const line of this.processedLines) {
@@ -520,62 +518,6 @@ export abstract class LyricPlayerBase
 
 		this.hasDuetLine = this.processedLines.some((line) => line.isDuet);
 
-		// 将行开始时间提早最多一秒
-		for (let i = this.processedLines.length - 1; i >= 0; i--) {
-			const line = this.processedLines[i];
-			if (line.isBG) continue;
-
-			const nextLine = this.processedLines[i + 1];
-			if (nextLine?.isBG) {
-				const allWords = [...line.words, ...nextLine.words].filter(
-					(w) => w.word.trim().length > 0,
-				);
-
-				if (allWords.length > 0) {
-					const minStart = Math.min(...allWords.map((w) => w.startTime));
-					const maxEnd = Math.max(...allWords.map((w) => w.endTime));
-
-					const finalStart = Math.min(
-						minStart,
-						line.startTime,
-						nextLine.startTime,
-					);
-					const finalEnd = Math.max(maxEnd, line.endTime, nextLine.endTime);
-
-					line.startTime = finalStart;
-					line.endTime = finalEnd;
-					nextLine.startTime = finalStart;
-					nextLine.endTime = finalEnd;
-				}
-			}
-		}
-
-		// 给背景歌词也尝试提前最多一秒
-		for (let i = this.processedLines.length - 1; i >= 0; i--) {
-			const line = this.processedLines[i];
-			if (line.isBG) continue;
-
-			let prevEndTime = 0;
-			if (i > 0) {
-				let prevIdx = i - 1;
-				if (this.processedLines[prevIdx].isBG) {
-					prevIdx--;
-				}
-				if (prevIdx >= 0) {
-					prevEndTime = this.processedLines[prevIdx].endTime;
-				}
-			}
-
-			const newStartTime = Math.max(prevEndTime, line.startTime - 1000);
-
-			line.startTime = newStartTime;
-
-			const nextLine = this.processedLines[i + 1];
-			if (nextLine?.isBG) {
-				nextLine.startTime = newStartTime;
-			}
-		}
-
 		for (const line of this.currentLyricLineObjects) {
 			line.dispose();
 		}
@@ -584,6 +526,7 @@ export abstract class LyricPlayerBase
 		this.hotLines.clear();
 		this.bufferedLines.clear();
 		this.setCurrentTime(0, true);
+
 		if (import.meta.env.DEV) {
 			console.log("歌词处理完成", this);
 		}
