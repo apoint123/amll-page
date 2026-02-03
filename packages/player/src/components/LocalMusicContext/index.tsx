@@ -249,7 +249,7 @@ export const LocalMusicContext: FC = () => {
 		const restorePlaybackState = async () => {
 			if (savedMusicId) {
 				const song = await db.songs.get(savedMusicId);
-				if (song && song.file instanceof Blob) {
+				if (song && song.file instanceof Blob && song.file.size > 0) {
 					try {
 						const file = new File([song.file], song.filePath, {
 							type: song.file.type,
