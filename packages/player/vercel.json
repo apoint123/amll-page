@@ -20,5 +20,7 @@
 				}
 			]
 		}
-	]
+	],
+	"installCommand": "pnpm install && rustup target add wasm32-unknown-unknown",
+	"buildCommand": "cd ../.. && npx nx build player"
 }
