@@ -217,7 +217,13 @@ export class LyricLineEl extends LyricLineBase {
 			for (const a of word.elementAnimations) {
 				a.currentTime = relativeTime;
 				a.playbackRate = 1;
-				if (shouldPlay) {
+
+				const timing = a.effect?.getComputedTiming();
+				const duration = (timing?.duration as number) || 0;
+				const delay = (timing?.delay as number) || 0;
+				const endTime = delay + duration;
+
+				if (shouldPlay && relativeTime < endTime) {
 					a.play();
 				} else {
 					a.pause();
@@ -225,9 +231,16 @@ export class LyricLineEl extends LyricLineBase {
 			}
 
 			for (const a of word.maskAnimations) {
-				a.currentTime = Math.min(this.totalDuration, maskRelativeTime);
+				const t = Math.min(this.totalDuration, maskRelativeTime);
+				a.currentTime = t;
 				a.playbackRate = 1;
-				if (shouldPlay) {
+
+				const timing = a.effect?.getComputedTiming();
+				const duration = (timing?.duration as number) || 0;
+				const delay = (timing?.delay as number) || 0;
+				const endTime = delay + duration;
+
+				if (shouldPlay && t < endTime) {
 					a.play();
 				} else {
 					a.pause();
@@ -236,6 +249,7 @@ export class LyricLineEl extends LyricLineBase {
 		}
 		main.classList.add(styles.active);
 	}
+
 	disable() {
 		this.isEnabled = false;
 		this.element.classList.remove(styles.active);
@@ -257,7 +271,9 @@ export class LyricLineEl extends LyricLineBase {
 		}
 		main.classList.remove(styles.active);
 	}
+
 	private lastWord?: RealWord;
+
 	async resume() {
 		if (!this.isEnabled) return;
 		for (const word of this.splittedWords) {
@@ -267,20 +283,39 @@ export class LyricLineEl extends LyricLineBase {
 					this.splittedWords.indexOf(this.lastWord) <
 						this.splittedWords.indexOf(word)
 				) {
-					a.play();
+					const timing = a.effect?.getComputedTiming();
+					const duration = (timing?.duration as number) || 0;
+					const delay = (timing?.delay as number) || 0;
+					const endTime = delay + duration;
+					const currentTime = (a.currentTime as number) || 0;
+
+					if (a.playState !== "finished" && currentTime < endTime) {
+						a.play();
+					}
 				}
 			}
+
 			for (const a of word.maskAnimations) {
 				if (
 					!this.lastWord ||
 					this.splittedWords.indexOf(this.lastWord) <
 						this.splittedWords.indexOf(word)
 				) {
-					a.play();
+					const timing = a.effect?.getComputedTiming();
+					const duration = (timing?.duration as number) || 0;
+					const delay = (timing?.delay as number) || 0;
+					const endTime = delay + duration;
+
+					const currentTime = (a.currentTime as number) || 0;
+
+					if (a.playState !== "finished" && currentTime < endTime) {
+						a.play();
+					}
 				}
 			}
 		}
 	}
+
 	async pause() {
 		if (!this.isEnabled) return;
 		for (const word of this.splittedWords) {
