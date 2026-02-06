@@ -48,7 +48,6 @@ import {
 } from "../../states/appAtoms";
 import {
 	auditLabelFilterAtom,
-	auditRepoConfigAtom,
 	currentAuditPrIdAtom,
 	githubTokenAtom,
 } from "../../states/auditAtoms";
@@ -109,7 +108,6 @@ const getPrAuthorName = (pr: GitHubPR) => {
 export const Component = () => {
 	const navigate = useNavigate();
 	const token = useAtomValue(githubTokenAtom);
-	const repoConfig = useAtomValue(auditRepoConfigAtom);
 	const [currentPrId, setCurrentPrId] = useAtom(currentAuditPrIdAtom);
 	const [labelFilter, setLabelFilter] = useAtom(auditLabelFilterAtom);
 	const [tempFilter, setTempFilter] = useState<LabelFilter[]>([]);
@@ -154,8 +152,8 @@ export const Component = () => {
 	};
 
 	const service = useMemo(() => {
-		return new AuditService(token, repoConfig.owner, repoConfig.repo);
-	}, [token, repoConfig]);
+		return new AuditService(token, "amll-dev", "amll-ttml-db");
+	}, [token]);
 
 	useEffect(() => {
 		pageRef.current = page;

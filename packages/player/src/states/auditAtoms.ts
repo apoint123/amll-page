@@ -11,14 +11,6 @@ export const githubTokenAtom = atomWithStorage<string>(
 	{ getOnInit: true },
 );
 
-export const auditRepoConfigAtom = atomWithStorage(
-	"amll-player.audit.repoConfig",
-	{
-		owner: "Steve-xmh",
-		repo: "amll-ttml-db",
-	},
-);
-
 export const currentAuditPrIdAtom = atom<number | null>(null);
 
 export const auditListRefreshAtom = atom(0);
