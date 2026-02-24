@@ -56,6 +56,8 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 	private currentUrl: string | null = null;
 	private fileSize = 0;
 
+	private playSessionId = 0;
+
 	private msgIdCounter = 0;
 
 	private pendingRequests = new Map<
@@ -90,6 +92,11 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 	}
 	public get audioInfo() {
 		return this.metadata;
+	}
+
+	private bumpSession(): number {
+		this.playSessionId++;
+		return this.playSessionId;
 	}
 
 	private requestWorker<T = void>(
@@ -128,6 +135,7 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 
 	public async load(file: File) {
 		this.reset();
+		const sessionId = this.bumpSession();
 		this.dispatch("loadstart");
 
 		try {
@@ -142,6 +150,7 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 				type: "INIT",
 				file,
 				chunkSize: 4096 * 8,
+				sessionId,
 			});
 		} catch (e) {
 			const err = toError(e);
@@ -152,6 +161,7 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 
 	public async loadSrc(url: string) {
 		this.reset();
+		const sessionId = this.bumpSession();
 		this.dispatch("loadstart");
 
 		try {
@@ -184,6 +194,7 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 				fileSize: this.fileSize,
 				sab: sab,
 				chunkSize: 4096 * 8,
+				sessionId,
 			});
 
 			this.runFetchLoop(url, 0, this.fileSize);
@@ -239,31 +250,16 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 
 			this.notifyWorkerSeek();
 
-			const chunks: Uint8Array[] = [];
-
 			while (true) {
 				const { done, value } = await reader.read();
 
 				if (done) {
 					this.ringBuffer?.setEOF();
-
-					if (startOffset === 0 && !signal.aborted) {
-						const blob = new Blob(chunks as BlobPart[], {
-							type: response.headers.get("Content-Type") || "audio/mpeg",
-						});
-						this.dispatch("sourcedownloaded", blob);
-					}
 					break;
 				}
 
-				if (value) {
-					if (startOffset === 0) {
-						chunks.push(value);
-					}
-
-					if (this.ringBuffer) {
-						await this.ringBuffer.write(value);
-					}
+				if (value && this.ringBuffer) {
+					await this.ringBuffer.write(value);
 				}
 
 				if (signal.aborted) break;
@@ -329,6 +325,8 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 		if (!this.worker || !this.audioCtx || !this.metadata || !this.masterGain)
 			return;
 
+		const sessionId = this.bumpSession();
+
 		this.dispatch("seeking");
 		this.isImmediateSeek = immediate;
 
@@ -350,6 +348,7 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 		await this.requestWorker({
 			type: "SEEK",
 			seekTime: time,
+			sessionId,
 		});
 
 		this.dispatch("timeupdate", time);
@@ -492,6 +491,10 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 					this.dispatch("canplay");
 					break;
 				case "CHUNK":
+					if (resp.sessionId !== this.playSessionId) {
+						return;
+					}
+
 					if (this.metadata) {
 						this.scheduleChunk(
 							resp.data,
@@ -582,7 +585,9 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 			this.nextStartTime = now;
 		}
 
-		this.syncTimeAnchor(this.nextStartTime, chunkStartTime);
+		if (chunkStartTime >= 0) {
+			this.syncTimeAnchor(this.nextStartTime, chunkStartTime);
+		}
 
 		const source = ctx.createBufferSource();
 		source.buffer = audioBuffer;
@@ -712,6 +717,7 @@ export class FFmpegAudioPlayer extends TypedEventTarget<FFmpegPlayerEventMap> {
 	}
 
 	private reset() {
+		this.bumpSession();
 		this.stopTimeUpdate();
 		this.audioCtx?.suspend();
 		this.stopActiveSources();

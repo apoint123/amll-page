@@ -26,6 +26,7 @@ function getModule(): Promise<AudioDecoderModule> {
 }
 
 class DecoderSession {
+	private sessionId: number = 0;
 	private decoder: AudioStreamDecoder | null = null;
 	private mountDir: string | null = null;
 	private isRunning = true;
@@ -38,6 +39,8 @@ class DecoderSession {
 		private module: AudioDecoderModule,
 		public req: WorkerRequest & { type: "INIT" | "INIT_STREAM" },
 	) {
+		this.sessionId = req.sessionId;
+
 		if (req.type === "INIT") {
 			this.mountDir = `/session_${req.id}`;
 			this.initFile(req.file);
@@ -183,6 +186,7 @@ class DecoderSession {
 						id: this.req.id,
 						data: copy,
 						startTime: result.startTime,
+						sessionId: this.sessionId,
 					},
 					[copy.buffer],
 				);
@@ -211,13 +215,14 @@ class DecoderSession {
 		}
 	}
 
-	public seek(time: number, newId: number) {
+	public seek(time: number, newId: number, newSessionId: number) {
 		if (!this.decoder) return;
 		try {
 			const result = this.decoder.seek(time);
 			if (result.status < 0) throw new Error(result.error);
 
 			this.req.id = newId;
+			this.sessionId = newSessionId;
 
 			this.post({ type: "SEEK_DONE", id: newId, time });
 
@@ -439,7 +444,7 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
 
 		case "SEEK":
 			if (currentSession) {
-				currentSession.seek(req.seekTime, req.id);
+				currentSession.seek(req.seekTime, req.id, req.sessionId);
 			}
 			break;
 

@@ -547,17 +547,6 @@ export const LocalMusicContext: FC = () => {
 			store.set(musicPlayingPositionAtom, (e.detail * 1000) | 0);
 		};
 
-		const handleSourceDownloaded = (e: CustomEvent<Blob>) => {
-			const blob = e.detail;
-			const currentId = store.get(musicIdAtom);
-			if (currentId) {
-				db.songs.update(currentId, { file: blob }).then(() => {
-					console.log(`[Player] Cached song: ${currentId}`);
-					tempAudioStore.delete(currentId);
-				});
-			}
-		};
-
 		audioPlayer.addEventListener("play", handlePlay);
 		audioPlayer.addEventListener("pause", handlePause);
 		audioPlayer.addEventListener("ended", handleEnded);
@@ -566,7 +555,6 @@ export const LocalMusicContext: FC = () => {
 		audioPlayer.addEventListener("timeupdate", handleTimeUpdate);
 		audioPlayer.addEventListener("seeking", handleSeeking);
 		audioPlayer.addEventListener("seeked", handleSeeked);
-		audioPlayer.addEventListener("sourcedownloaded", handleSourceDownloaded);
 
 		return () => {
 			audioPlayer.removeEventListener("play", handlePlay);
@@ -577,10 +565,6 @@ export const LocalMusicContext: FC = () => {
 			audioPlayer.removeEventListener("timeupdate", handleTimeUpdate);
 			audioPlayer.removeEventListener("seeking", handleSeeking);
 			audioPlayer.removeEventListener("seeked", handleSeeked);
-			audioPlayer.removeEventListener(
-				"sourcedownloaded",
-				handleSourceDownloaded,
-			);
 
 			const doNothing = toEmit(() => {});
 			store.set(onRequestNextSongAtom, doNothing);

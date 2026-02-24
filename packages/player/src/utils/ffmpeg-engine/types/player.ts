@@ -30,23 +30,34 @@ export interface PlayerEventMap {
 	volumechange: number;
 	durationchange: number;
 	ended: undefined;
-	sourcedownloaded: Blob;
 	error: string;
 	emptied: undefined;
 }
 
 export type WorkerRequest =
-	| { type: "INIT"; id: number; file: File; chunkSize: number }
+	| {
+			type: "INIT";
+			id: number;
+			file: File;
+			chunkSize: number;
+			sessionId: number;
+	  }
 	| {
 			type: "INIT_STREAM";
 			id: number;
 			fileSize: number;
 			sab: SharedArrayBuffer;
 			chunkSize: number;
+			sessionId: number;
 	  }
 	| { type: "PAUSE"; id: number }
 	| { type: "RESUME"; id: number }
-	| { type: "SEEK"; id: number; seekTime: number }
+	| {
+			type: "SEEK";
+			id: number;
+			seekTime: number;
+			sessionId: number;
+	  }
 	| { type: "SET_TEMPO"; id: number; value: number }
 	| { type: "SET_PITCH"; id: number; value: number }
 	| { type: "EXPORT_WAV"; id: number; file: File };
@@ -70,6 +81,7 @@ export type WorkerResponse =
 			id: number;
 			data: Float32Array;
 			startTime: number;
+			sessionId: number;
 	  }
 	| { type: "EOF"; id: number }
 	| { type: "SEEK_DONE"; id: number; time: number }
