@@ -64,7 +64,7 @@
 	"devDependencies": {
 		"@applemusic-like-lyrics/lyric": "workspace:^",
 		"@biomejs/biome": "catalog:",
-		"@radix-ui/themes": "^3.2.1",
+		"@radix-ui/themes": "^3.3.0",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",
 		"@types/ungap__structured-clone": "^1.2.0",
