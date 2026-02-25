@@ -91,50 +91,48 @@ export function chunkAndSplitLyricWords(
 
 	const result: (LyricWord | LyricWord[])[] = [];
 	let atomIndex = 0;
-	let currentAtomOffset = 0;
-	let currentSegmentOffset = 0;
+	let expectedLength = 0;
+	let actualLength = 0;
+	let currentGroup: LyricWord[] = [];
 
 	for (const segment of segments) {
-		const segmentStr = segment.segment;
-		const segmentLen = segmentStr.length;
+		const segmentLen = segment.segment.length;
+		expectedLength += segmentLen;
 
-		if (currentAtomOffset > currentSegmentOffset) {
-			currentSegmentOffset += segmentLen;
-			continue;
-		}
-
-		const segmentGroup: LyricWord[] = [];
-		let neededLength = segmentLen;
-
-		while (neededLength > 0 && atomIndex < atoms.length) {
+		while (actualLength < expectedLength && atomIndex < atoms.length) {
 			const currentAtom = atoms[atomIndex];
-			const atomLen = currentAtom.word.length;
-
-			segmentGroup.push(currentAtom);
-
-			currentAtomOffset += atomLen;
+			currentGroup.push(currentAtom);
+			actualLength += currentAtom.word.length;
 			atomIndex++;
-			neededLength -= atomLen;
 		}
 
-		currentSegmentOffset += segmentLen;
-
-		while (segmentGroup.length > 1 && !segmentGroup[0].word.trim()) {
-			const spaceAtom = segmentGroup.shift();
-			if (spaceAtom) {
-				result.push(spaceAtom);
+		if (actualLength === expectedLength) {
+			while (currentGroup.length > 1 && !currentGroup[0].word.trim()) {
+				const spaceAtom = currentGroup.shift();
+				if (spaceAtom) {
+					result.push(spaceAtom);
+				}
 			}
-		}
 
-		if (segmentGroup.length === 1) {
-			result.push(segmentGroup[0]);
-		} else if (segmentGroup.length > 1) {
-			result.push(segmentGroup);
+			if (currentGroup.length === 1) {
+				result.push(currentGroup[0]);
+			} else if (currentGroup.length > 1) {
+				result.push(currentGroup);
+			}
+			currentGroup = [];
 		}
 	}
 
 	while (atomIndex < atoms.length) {
 		result.push(atoms[atomIndex++]);
+	}
+
+	if (currentGroup.length > 0) {
+		if (currentGroup.length === 1) {
+			result.push(currentGroup[0]);
+		} else {
+			result.push(currentGroup);
+		}
 	}
 
 	return result;
