@@ -5,7 +5,17 @@ import type { LyricLine } from "../interfaces.ts";
  */
 function resetLineTimestamps(lines: LyricLine[]) {
 	for (const line of lines) {
-		if (line.words.length > 0) {
+		// 主要是给 TTML 解析器打补丁，其解析逐行歌词时获得的词时间戳均为0
+		// 如果只有一个词，且该词的起止时间均为0，且行时间戳不全为0，则将行时间戳同步给词时间戳
+		if (
+			line.words.length === 1 &&
+			line.words[0].startTime === 0 &&
+			line.words[0].endTime === 0 &&
+			(line.startTime !== 0 || line.endTime !== 0)
+		) {
+			line.words[0].startTime = line.startTime;
+			line.words[0].endTime = line.endTime;
+		} else if (line.words.length > 0) {
 			const firstWord = line.words[0];
 			const lastWord = line.words[line.words.length - 1];
 
