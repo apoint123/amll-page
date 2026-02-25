@@ -76,9 +76,12 @@ export const FFTToLowPassContext: FC = () => {
 		dataArrayRef.current = new Uint8Array(1024);
 	}
 
+	const currentSmoothedVolumeRef = useRef<number>(0);
+
 	useEffect(() => {
-		if (!isPlaying || !isLyricPageOpened) {
+		if (!isLyricPageOpened) {
 			setLowFreqVolume(0);
+			currentSmoothedVolumeRef.current = 0;
 			return;
 		}
 
@@ -87,34 +90,47 @@ export const FFTToLowPassContext: FC = () => {
 		const dataArray = dataArrayRef.current!;
 
 		const updateMeter = () => {
-			const analyser = audioPlayer.analyser;
+			let targetVolume = 0;
 
-			if (analyser) {
-				if (analyser.fftSize !== 2048) analyser.fftSize = 2048;
-				if (analyser.smoothingTimeConstant !== 0.85)
-					analyser.smoothingTimeConstant = 0.85;
+			if (isPlaying) {
+				const analyser = audioPlayer.analyser;
 
-				analyser.getByteFrequencyData(dataArray);
-				store.set(fftDataAtom, Array.from(dataArray));
+				if (analyser) {
+					if (analyser.fftSize !== 2048) analyser.fftSize = 2048;
+					if (analyser.smoothingTimeConstant !== 0.7)
+						analyser.smoothingTimeConstant = 0.7;
 
-				const startIndex = 0;
-				const endIndex = 10;
-				let sum = 0;
+					analyser.getByteFrequencyData(dataArray);
+					store.set(fftDataAtom, Array.from(dataArray));
 
-				for (let i = startIndex; i < endIndex; i++) {
-					sum += dataArray[i];
+					const startIndex = 2;
+					const endIndex = 10;
+					let sum = 0;
+
+					for (let i = startIndex; i < endIndex; i++) {
+						sum += dataArray[i];
+					}
+
+					const average = sum / (endIndex - startIndex);
+					targetVolume = (average / 255) * 2.0;
+
+					if (targetVolume > 0.1) {
+						targetVolume = Math.max(targetVolume, 0.4);
+					} else {
+						targetVolume = 0;
+					}
 				}
-
-				const average = sum / (endIndex - startIndex);
-				let volume = (average / 255) * 3.0;
-
-				if (volume > 0.1) {
-					volume = Math.max(volume, 0.4);
-				}
-
-				setLowFreqVolume(volume);
 			}
 
+			const smoothFactor = 0.2;
+			currentSmoothedVolumeRef.current +=
+				(targetVolume - currentSmoothedVolumeRef.current) * smoothFactor;
+
+			if (!isPlaying && currentSmoothedVolumeRef.current < 0.001) {
+				currentSmoothedVolumeRef.current = 0;
+			}
+
+			setLowFreqVolume(currentSmoothedVolumeRef.current);
 			animationFrameId = requestAnimationFrame(updateMeter);
 		};
 
@@ -123,7 +139,7 @@ export const FFTToLowPassContext: FC = () => {
 		return () => {
 			cancelAnimationFrame(animationFrameId);
 		};
-	}, [isPlaying, setLowFreqVolume]);
+	}, [isPlaying, isLyricPageOpened, setLowFreqVolume, store]);
 
 	return null;
 };
